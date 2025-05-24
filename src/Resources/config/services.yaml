@@ -7,3 +7,5 @@ services:
 
   Tourze\HotelContractBundle\Repository\:
     resource: '../../Repository/'
+  Tourze\HotelContractBundle\Service\:
+    resource: '../../Service/'

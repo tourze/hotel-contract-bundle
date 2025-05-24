@@ -11,6 +11,7 @@ class HotelContractBundle extends Bundle implements BundleDependencyInterface
     {
         return [
             \Tourze\HotelProfileBundle\HotelProfileBundle::class => ['all' => true],
+            \Tourze\EnvManageBundle\EnvManageBundle::class => ['all' => true],
         ];
     }
 }
