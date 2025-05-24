@@ -24,9 +24,11 @@ use EasyCorp\Bundle\EasyAdminBundle\Field\MoneyField;
 use EasyCorp\Bundle\EasyAdminBundle\Filter\DateTimeFilter;
 use EasyCorp\Bundle\EasyAdminBundle\Filter\EntityFilter;
 use EasyCorp\Bundle\EasyAdminBundle\Router\AdminUrlGenerator;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpFoundation\ResponseHeaderBag;
 use Tourze\HotelContractBundle\Entity\InventorySummary;
 use Tourze\HotelContractBundle\Enum\InventorySummaryStatusEnum;
 use Tourze\HotelContractBundle\Service\InventoryConfig;
@@ -293,9 +295,9 @@ class InventorySummaryCrudController extends AbstractCrudController
         fclose($csvFile);
 
         // 设置响应
-        $response = new \Symfony\Component\HttpFoundation\BinaryFileResponse($tempFile);
+        $response = new BinaryFileResponse($tempFile);
         $response->setContentDisposition(
-            \Symfony\Component\HttpFoundation\ResponseHeaderBag::DISPOSITION_ATTACHMENT,
+            ResponseHeaderBag::DISPOSITION_ATTACHMENT,
             'inventory_summary_' . (new \DateTime())->format('Ymd_His') . '.csv'
         );
 
