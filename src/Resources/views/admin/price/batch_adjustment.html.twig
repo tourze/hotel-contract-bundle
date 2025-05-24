@@ -1,0 +1,188 @@
+{% extends '@EasyAdmin/page/content.html.twig' %}
+
+{% block page_title %}批量调价{% endblock %}
+
+{% block content_title %}批量调价{% endblock %}
+
+{% block main %}
+<div class="card">
+    <div class="card-body">
+        <form method="post" enctype="multipart/form-data">
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label for="hotel">选择酒店</label>
+                        <select id="hotel" name="hotel" class="form-control" required>
+                            <option value="">-- 请选择酒店 --</option>
+                            {% for hotel in hotels %}
+                                <option value="{{ hotel.id }}">{{ hotel.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label for="room_type">选择房型</label>
+                        <select id="room_type" name="room_type" class="form-control">
+                            <option value="">-- 全部房型 --</option>
+                            {% for room_type in room_types %}
+                                <option value="{{ room_type.id }}">{{ room_type.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label for="start_date">开始日期</label>
+                        <input type="date" id="start_date" name="start_date" class="form-control" required>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label for="end_date">结束日期</label>
+                        <input type="date" id="end_date" name="end_date" class="form-control" required>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label for="price_type">价格类型</label>
+                        <select id="price_type" name="price_type" class="form-control" required>
+                            <option value="cost">采购成本价</option>
+                            <option value="selling">销售价格</option>
+                            <option value="both">两者都修改</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label for="day_filter">日期筛选</label>
+                        <select id="day_filter" name="day_filter" class="form-control">
+                            <option value="">所有日期</option>
+                            <option value="weekend">仅周末</option>
+                            <option value="weekday">仅工作日</option>
+                            <option value="custom">自定义</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row custom-days" style="display: none;">
+                <div class="col-md-12">
+                    <div class="form-group">
+                        <label>选择特定星期几</label>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="day_mon" name="days[]" value="1">
+                            <label class="form-check-label" for="day_mon">周一</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="day_tue" name="days[]" value="2">
+                            <label class="form-check-label" for="day_tue">周二</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="day_wed" name="days[]" value="3">
+                            <label class="form-check-label" for="day_wed">周三</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="day_thu" name="days[]" value="4">
+                            <label class="form-check-label" for="day_thu">周四</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="day_fri" name="days[]" value="5">
+                            <label class="form-check-label" for="day_fri">周五</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="day_sat" name="days[]" value="6">
+                            <label class="form-check-label" for="day_sat">周六</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="day_sun" name="days[]" value="0">
+                            <label class="form-check-label" for="day_sun">周日</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label for="adjust_method">调整方式</label>
+                        <select id="adjust_method" name="adjust_method" class="form-control" required>
+                            <option value="fixed">设为固定值</option>
+                            <option value="percent">按百分比调整</option>
+                            <option value="increment">增加固定金额</option>
+                            <option value="decrement">减少固定金额</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-6 fixed-price">
+                    <div class="form-group">
+                        <label for="price_value">价格值</label>
+                        <input type="number" id="price_value" name="price_value" class="form-control" step="0.01" min="0" required>
+                        <small class="form-text text-muted">设置固定价格值</small>
+                    </div>
+                </div>
+                <div class="col-md-6 adjust-value" style="display: none;">
+                    <div class="form-group">
+                        <label for="adjust_value">调整值</label>
+                        <input type="number" id="adjust_value" name="adjust_value" class="form-control" step="0.01" required>
+                        <small class="form-text text-muted percent-hint" style="display: none;">请输入百分比数值（如：10 表示 10%）</small>
+                        <small class="form-text text-muted amount-hint">请输入调整金额</small>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="form-group">
+                        <label for="reason">调价原因</label>
+                        <textarea id="reason" name="reason" class="form-control" rows="3"></textarea>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row mt-3">
+                <div class="col-md-12">
+                    <button type="submit" class="btn btn-warning">
+                        <i class="fa fa-edit"></i> 批量调价
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const dayFilter = document.getElementById('day_filter');
+    const customDays = document.querySelector('.custom-days');
+    const adjustMethod = document.getElementById('adjust_method');
+    const fixedPrice = document.querySelector('.fixed-price');
+    const adjustValue = document.querySelector('.adjust-value');
+    const percentHint = document.querySelector('.percent-hint');
+    const amountHint = document.querySelector('.amount-hint');
+    
+    dayFilter.addEventListener('change', function() {
+        customDays.style.display = this.value === 'custom' ? 'block' : 'none';
+    });
+    
+    adjustMethod.addEventListener('change', function() {
+        const method = this.value;
+        fixedPrice.style.display = method === 'fixed' ? 'block' : 'none';
+        adjustValue.style.display = method !== 'fixed' ? 'block' : 'none';
+        
+        percentHint.style.display = method === 'percent' ? 'block' : 'none';
+        amountHint.style.display = (method === 'increment' || method === 'decrement') ? 'block' : 'none';
+    });
+    
+    // 初始状态
+    dayFilter.dispatchEvent(new Event('change'));
+    adjustMethod.dispatchEvent(new Event('change'));
+});
+</script>
+{% endblock %} 

@@ -1,0 +1,298 @@
+{% extends '@EasyAdmin/page/content.html.twig' %}
+
+{% block page_title %}合同价格日历管理{% endblock %}
+
+{% block content_title %}合同价格日历管理 - {{ currentMonth }}{% endblock %}
+
+{% block main %}
+<div class="card mb-3">
+    <div class="card-body">
+        <form method="get" action="{{ path('admin_price_contract_calendar') }}" class="row">
+            <div class="col-md-5">
+                <div class="form-group">
+                    <label for="contract">选择合同</label>
+                    <select id="contract" name="contract" class="form-control" onchange="this.form.submit()">
+                        <option value="">-- 请选择合同 --</option>
+                        {% for c in contracts %}
+                            <option value="{{ c.id }}" {% if selectedContract and selectedContract.id == c.id %}selected{% endif %}>
+                                {{ c.contractNo }} - {{ c.hotel.name }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            <div class="col-md-5">
+                <div class="form-group">
+                    <label for="month">选择月份</label>
+                    <input type="month" id="month" name="month" class="form-control" value="{{ month }}" onchange="this.form.submit()">
+                </div>
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary">查询</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% if selectedContract %}
+    <div class="card">
+        <div class="card-header">
+            <h3>合同编号: {{ selectedContract.contractNo }}</h3>
+            <p>酒店: {{ selectedContract.hotel.name }}</p>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-bordered price-calendar">
+                    <thead>
+                        <tr>
+                            <th>房型/日期</th>
+                            {% for date in calendarData.dates %}
+                                <th class="text-center {% if date.is_weekend %}bg-light{% endif %}">
+                                    {{ date.day }}<br>
+                                    <small>{{ date.weekday }}</small>
+                                </th>
+                            {% endfor %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for roomTypeData in calendarData.roomTypes %}
+                            <tr>
+                                <th>{{ roomTypeData.roomType.name }}</th>
+                                {% for price in roomTypeData.prices %}
+                                    <td class="text-center {% if calendarData.dates[loop.index0].is_weekend %}bg-light{% endif %}">
+                                        {% if price.inventories is empty %}
+                                            <span class="text-muted">-</span>
+                                        {% else %}
+                                            <div class="price-cell">
+                                                <div class="price-display">
+                                                    {% set totalRooms = price.inventories|length %}
+                                                    {% set totalPrice = 0 %}
+                                                    {% for inv in price.inventories %}
+                                                        {% set totalPrice = totalPrice + inv.costPrice %}
+                                                    {% endfor %}
+                                                    {% set avgPrice = (totalPrice / totalRooms)|round(2) %}
+                                                    
+                                                    {{ avgPrice }}元 <span class="badge bg-secondary">{{ totalRooms }}间</span>
+                                                    <a href="#" class="edit-price-btn" data-bs-toggle="modal" data-bs-target="#editPriceModal" 
+                                                       data-date="{{ price.date }}" 
+                                                       data-room-type="{{ roomTypeData.roomType.id }}"
+                                                       data-avg-price="{{ avgPrice }}"
+                                                       data-total-rooms="{{ totalRooms }}">
+                                                        <i class="fa fa-edit"></i>
+                                                    </a>
+                                                </div>
+                                                
+                                                <div class="price-details d-none">
+                                                    {% for inv in price.inventories %}
+                                                        <div class="room-price mb-1">
+                                                            <small>{{ inv.code }}: {{ inv.costPrice }}元</small>
+                                                            <a href="#" class="edit-single-price-btn" data-bs-toggle="modal" data-bs-target="#editSinglePriceModal"
+                                                               data-inventory-id="{{ inv.id }}"
+                                                               data-inventory-code="{{ inv.code }}"
+                                                               data-cost-price="{{ inv.costPrice }}">
+                                                                <i class="fa fa-pencil-alt"></i>
+                                                            </a>
+                                                        </div>
+                                                    {% endfor %}
+                                                </div>
+                                            </div>
+                                        {% endif %}
+                                    </td>
+                                {% endfor %}
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 编辑单个价格弹窗 -->
+    <div class="modal fade" id="editSinglePriceModal" tabindex="-1" aria-labelledby="editSinglePriceModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="editSinglePriceModalLabel">编辑房间价格</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form method="post" action="{{ path('admin_price_update_contract_price') }}">
+                    <div class="modal-body">
+                        <input type="hidden" name="inventory_id" id="inventory_id">
+                        <input type="hidden" name="redirect_url" value="{{ app.request.uri }}">
+                        
+                        <div class="mb-3">
+                            <label for="room_number" class="form-label">库存编码</label>
+                            <input type="text" class="form-control" id="room_number" readonly>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="cost_price" class="form-label">采购成本价</label>
+                            <input type="number" class="form-control" id="cost_price" name="cost_price" step="0.01" min="0" required>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                        <button type="submit" class="btn btn-primary">保存</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 批量编辑价格弹窗 -->
+    <div class="modal fade" id="editPriceModal" tabindex="-1" aria-labelledby="editPriceModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="editPriceModalLabel">批量调整价格</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p id="batchEditInfo"></p>
+                    
+                    <div class="mb-3">
+                        <label for="batch_adjust_method" class="form-label">调整方式</label>
+                        <select id="batch_adjust_method" class="form-select">
+                            <option value="fixed">设为固定值</option>
+                            <option value="percent">按百分比调整</option>
+                            <option value="increment">增加固定金额</option>
+                            <option value="decrement">减少固定金额</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3" id="fixed_price_container">
+                        <label for="batch_price_value" class="form-label">价格值</label>
+                        <input type="number" class="form-control" id="batch_price_value" step="0.01" min="0">
+                    </div>
+                    
+                    <div class="mb-3 d-none" id="adjust_value_container">
+                        <label for="batch_adjust_value" class="form-label">调整值</label>
+                        <input type="number" class="form-control" id="batch_adjust_value" step="0.01">
+                        <small id="adjust_hint" class="form-text text-muted"></small>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-primary" id="saveBatchEdit">保存</button>
+                </div>
+            </div>
+        </div>
+    </div>
+{% else %}
+    <div class="alert alert-info">请选择合同查看价格日历</div>
+{% endif %}
+
+<style>
+.price-calendar th, .price-calendar td {
+    vertical-align: middle;
+    padding: 8px 4px;
+    font-size: 0.9rem;
+}
+.price-cell {
+    position: relative;
+}
+.price-cell:hover .edit-price-btn,
+.room-price:hover .edit-single-price-btn {
+    display: inline-block;
+}
+.edit-price-btn,
+.edit-single-price-btn {
+    display: none;
+    position: absolute;
+    right: 0;
+    top: 0;
+    color: #007bff;
+    cursor: pointer;
+}
+.price-cell:hover .price-details {
+    display: block !important;
+    margin-top: 5px;
+    border-top: 1px dashed #ddd;
+    padding-top: 5px;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // 初始化单个价格编辑弹窗
+    document.querySelectorAll('.edit-single-price-btn').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            const inventoryId = this.getAttribute('data-inventory-id');
+            const roomNumber = this.getAttribute('data-inventory-code');
+            const costPrice = this.getAttribute('data-cost-price');
+            
+            document.getElementById('inventory_id').value = inventoryId;
+            document.getElementById('room_number').value = roomNumber;
+            document.getElementById('cost_price').value = costPrice;
+        });
+    });
+    
+    // 批量调价方式切换
+    const batchAdjustMethod = document.getElementById('batch_adjust_method');
+    const fixedPriceContainer = document.getElementById('fixed_price_container');
+    const adjustValueContainer = document.getElementById('adjust_value_container');
+    const adjustHint = document.getElementById('adjust_hint');
+    
+    batchAdjustMethod.addEventListener('change', function() {
+        const method = this.value;
+        if (method === 'fixed') {
+            fixedPriceContainer.classList.remove('d-none');
+            adjustValueContainer.classList.add('d-none');
+        } else {
+            fixedPriceContainer.classList.add('d-none');
+            adjustValueContainer.classList.remove('d-none');
+            
+            if (method === 'percent') {
+                adjustHint.textContent = '请输入百分比数值（如：10 表示增加 10%）';
+            } else {
+                adjustHint.textContent = '请输入调整金额';
+            }
+        }
+    });
+    
+    // 初始化批量价格编辑弹窗
+    let currentDate = '';
+    let currentRoomType = '';
+    let currentAvgPrice = 0;
+    let currentTotalRooms = 0;
+    
+    document.querySelectorAll('.edit-price-btn').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            currentDate = this.getAttribute('data-date');
+            currentRoomType = this.getAttribute('data-room-type');
+            currentAvgPrice = this.getAttribute('data-avg-price');
+            currentTotalRooms = this.getAttribute('data-total-rooms');
+            
+            document.getElementById('batchEditInfo').textContent = 
+                `房型ID: ${currentRoomType}, 日期: ${currentDate}, 当前均价: ${currentAvgPrice}元, 房间数: ${currentTotalRooms}`;
+            
+            document.getElementById('batch_price_value').value = currentAvgPrice;
+            document.getElementById('batch_adjust_value').value = '';
+            
+            // 重置调整方式
+            batchAdjustMethod.value = 'fixed';
+            batchAdjustMethod.dispatchEvent(new Event('change'));
+        });
+    });
+    
+    // 实现批量保存逻辑（此处仅为前端示例，实际需后端支持）
+    document.getElementById('saveBatchEdit').addEventListener('click', function() {
+        const method = batchAdjustMethod.value;
+        let priceValue = 0;
+        
+        if (method === 'fixed') {
+            priceValue = parseFloat(document.getElementById('batch_price_value').value);
+        } else {
+            priceValue = parseFloat(document.getElementById('batch_adjust_value').value);
+        }
+        
+        alert('此功能需要后端支持，当前仅为前端示例');
+        // TODO: 实现批量价格调整的AJAX请求
+        
+        // 关闭弹窗
+        const modal = bootstrap.Modal.getInstance(document.getElementById('editPriceModal'));
+        modal.hide();
+    });
+});
+</script>
+{% endblock %}

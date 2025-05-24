@@ -1,0 +1,131 @@
+{% extends '@EasyAdmin/page/content.html.twig' %}
+
+{% block title %}批量创建房型库存{% endblock %}
+
+{% block content_title %}批量创建房型库存{% endblock %}
+
+{% block main %}
+    <div class="card">
+        <div class="card-header">
+            <h5>批量创建房型库存</h5>
+        </div>
+        <div class="card-body">
+            <form method="post" action="{{ path('admin_room_type_inventory_batch_create_process') }}">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="roomType">房型</label>
+                            <select class="form-control" id="roomType" name="roomType" required>
+                                <option value="">请选择房型</option>
+                                {% for roomType in roomTypes %}
+                                    <optgroup label="{{ roomType.hotel.name }}">
+                                        <option value="{{ roomType.id }}">{{ roomType.name }} (总房间数: {{ roomType.totalRooms }})</option>
+                                    </optgroup>
+                                {% endfor %}
+                            </select>
+                            <small class="form-text text-muted">选择要创建库存的房型</small>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="contract">合同</label>
+                            <select class="form-control" id="contract" name="contract" required>
+                                <option value="">请选择合同</option>
+                                {% for contract in contracts %}
+                                    <option value="{{ contract.id }}">{{ contract.contractNo }} ({{ contract.hotel.name }})</option>
+                                {% endfor %}
+                            </select>
+                            <small class="form-text text-muted">选择库存关联的合同</small>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label for="count">库存数量</label>
+                            <input type="number" class="form-control" id="count" name="count" min="1" value="1" required>
+                            <small class="form-text text-muted">每天创建的库存数量</small>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label for="startDate">开始日期</label>
+                            <input type="date" class="form-control" id="startDate" name="startDate" required>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label for="endDate">结束日期</label>
+                            <input type="date" class="form-control" id="endDate" name="endDate" required>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="costPrice">成本价</label>
+                            <input type="number" class="form-control" id="costPrice" name="costPrice" min="0" step="0.01" value="0.00">
+                            <small class="form-text text-muted">库存成本价格</small>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="sellingPrice">销售价</label>
+                            <input type="number" class="form-control" id="sellingPrice" name="sellingPrice" min="0" step="0.01" value="0.00">
+                            <small class="form-text text-muted">库存销售价格</small>
+                        </div>
+                    </div>
+                </div>
+                
+                <button type="submit" class="btn btn-primary">创建库存</button>
+                <a href="{{ ea_url()
+                    .setController('HotelBookingSystem\\Controller\\Admin\\RoomTypeInventoryCrudController')
+                    .setAction('index')
+                }}" class="btn btn-secondary">返回</a>
+            </form>
+        </div>
+    </div>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // 设置默认日期为今天和一个月后
+            const today = new Date();
+            const nextMonth = new Date();
+            nextMonth.setMonth(today.getMonth() + 1);
+            
+            document.getElementById('startDate').valueAsDate = today;
+            document.getElementById('endDate').valueAsDate = nextMonth;
+            
+            // 过滤房型和合同的联动关系
+            const roomTypeSelect = document.getElementById('roomType');
+            const contractSelect = document.getElementById('contract');
+            
+            roomTypeSelect.addEventListener('change', function() {
+                const selectedRoomType = this.options[this.selectedIndex];
+                if (selectedRoomType && selectedRoomType.parentNode.tagName === 'OPTGROUP') {
+                    const hotelName = selectedRoomType.parentNode.label;
+                    
+                    // 过滤合同
+                    for (let i = 0; i < contractSelect.options.length; i++) {
+                        const option = contractSelect.options[i];
+                        if (option.value === '') continue; // 跳过默认选项
+                        
+                        if (option.text.includes(hotelName)) {
+                            option.style.display = '';
+                        } else {
+                            option.style.display = 'none';
+                        }
+                    }
+                    
+                    // 如果当前选中的合同被隐藏了，重置选择
+                    if (contractSelect.selectedIndex > 0 && 
+                        contractSelect.options[contractSelect.selectedIndex].style.display === 'none') {
+                        contractSelect.selectedIndex = 0;
+                    }
+                }
+            });
+        });
+    </script>
+{% endblock %}

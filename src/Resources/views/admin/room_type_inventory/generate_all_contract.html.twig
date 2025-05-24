@@ -1,0 +1,38 @@
+{% extends '@EasyAdmin/page/content.html.twig' %}
+
+{% block title %}一键生成所有合同库存{% endblock %}
+
+{% block content_title %}一键生成所有合同库存{% endblock %}
+
+{% block main %}
+    <div class="card">
+        <div class="card-header">
+            <h5>一键为所有生效合同生成库存</h5>
+        </div>
+        <div class="card-body">
+            <div class="alert alert-info">
+                <p>此功能将为所有生效中的合同自动生成库存，操作说明：</p>
+                <ul>
+                    <li>只会处理状态为<strong>生效中</strong>的合同</li>
+                    <li>合同规定的总房间数会<strong>平均分配</strong>给所有关联房型</li>
+                    <li>如果某天库存数量不足，将<strong>只创建缺少的数量</strong>，避免重复创建</li>
+                    <li>生成的库存默认为<strong>可售状态</strong></li>
+                </ul>
+            </div>
+
+            <form method="post" action="{{ path('admin_room_type_inventory_generate_all_contract_process') }}">
+                <div class="form-group">
+                    <label for="days">生成天数</label>
+                    <input type="number" class="form-control" id="days" name="days" min="1" max="365" value="{{ days }}" required>
+                    <small class="form-text text-muted">从今天开始，生成多少天的库存</small>
+                </div>
+
+                <button type="submit" class="btn btn-primary">开始生成库存</button>
+                <a href="{{ ea_url()
+                    .setController('HotelBookingSystem\\Controller\\Admin\\RoomTypeInventoryCrudController')
+                    .setAction('index')
+                }}" class="btn btn-secondary">返回</a>
+            </form>
+        </div>
+    </div>
+{% endblock %}

@@ -74,8 +74,8 @@ class DailyInventory implements Stringable
     private ?\DateTimeInterface $updateTime = null;
 
     #[UpdatedByColumn]
-    #[ORM\Column(type: Types::BIGINT, nullable: true)]
-    private ?int $lastModifiedBy = null;
+    #[ORM\Column(type: Types::STRING, nullable: true)]
+    private ?string $lastModifiedBy = null;
 
     public function __toString(): string
     {
@@ -222,9 +222,14 @@ class DailyInventory implements Stringable
         return $this->updateTime;
     }
 
-    public function getLastModifiedBy(): ?int
+    public function getLastModifiedBy(): ?string
     {
         return $this->lastModifiedBy;
+    }
+
+    public function setLastModifiedBy(?string $lastModifiedBy): void
+    {
+        $this->lastModifiedBy = $lastModifiedBy;
     }
 
     /**
