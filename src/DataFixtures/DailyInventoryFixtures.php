@@ -128,4 +128,4 @@ class DailyInventoryFixtures extends Fixture implements DependentFixtureInterfac
     {
         return ['dev', 'test'];
     }
-} 
+}

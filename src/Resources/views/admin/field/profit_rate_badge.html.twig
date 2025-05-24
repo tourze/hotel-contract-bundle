@@ -1,0 +1,5 @@
+{% if field.value %}
+    <span class="badge bg-{{ field.value.color }}">{{ field.value.formatted }}</span>
+{% else %}
+    <span class="badge bg-secondary">0.00%</span>
+{% endif %}

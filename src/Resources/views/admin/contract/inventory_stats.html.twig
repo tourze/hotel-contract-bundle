@@ -1,0 +1,134 @@
+{% extends '@EasyAdmin/page/content.html.twig' %}
+
+{% block title %}合同库存统计{% endblock %}
+
+{% block content_title %}合同 {{ contract.contractNo }} 的库存统计{% endblock %}
+
+{% block main %}
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5>合同基本信息</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-3">
+                    <p><strong>合同编号:</strong> {{ contract.contractNo }}</p>
+                </div>
+                <div class="col-md-3">
+                    <p><strong>酒店:</strong> {{ contract.hotel.name }}</p>
+                </div>
+                <div class="col-md-3">
+                    <p><strong>开始日期:</strong> {{ contract.startDate|date('Y-m-d') }}</p>
+                </div>
+                <div class="col-md-3">
+                    <p><strong>结束日期:</strong> {{ contract.endDate|date('Y-m-d') }}</p>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-12">
+                    <p><strong>统计周期:</strong> {{ startDate|date('Y-m-d') }} 至 {{ endDate|date('Y-m-d') }} (未来30天)</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5>按房型统计</h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>房型</th>
+                            <th>总库存</th>
+                            <th>可售库存</th>
+                            <th>已售库存</th>
+                            <th>预留库存</th>
+                            <th>销售比例</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if inventoryStats is empty %}
+                            <tr>
+                                <td colspan="6" class="text-center">暂无库存数据</td>
+                            </tr>
+                        {% else %}
+                            {% for stat in inventoryStats %}
+                                <tr>
+                                    <td>{{ stat.roomTypeName }}</td>
+                                    <td>{{ stat.totalCount }}</td>
+                                    <td>{{ stat.availableCount }}</td>
+                                    <td>{{ stat.soldCount }}</td>
+                                    <td>{{ stat.reservedCount }}</td>
+                                    <td>
+                                        {% if stat.totalCount > 0 %}
+                                            {{ ((stat.soldCount / stat.totalCount) * 100)|round(2) }}%
+                                        {% else %}
+                                            0%
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <div class="card">
+        <div class="card-header">
+            <h5>每日库存情况</h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>日期</th>
+                            <th>总库存</th>
+                            <th>可售库存</th>
+                            <th>已售库存</th>
+                            <th>预留库存</th>
+                            <th>销售比例</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if dailyStats is empty %}
+                            <tr>
+                                <td colspan="6" class="text-center">暂无库存数据</td>
+                            </tr>
+                        {% else %}
+                            {% for stat in dailyStats %}
+                                <tr>
+                                    <td>{{ stat.date }}</td>
+                                    <td>{{ stat.totalCount }}</td>
+                                    <td>{{ stat.availableCount }}</td>
+                                    <td>{{ stat.soldCount }}</td>
+                                    <td>{{ stat.reservedCount }}</td>
+                                    <td>
+                                        {% if stat.totalCount > 0 %}
+                                            {{ ((stat.soldCount / stat.totalCount) * 100)|round(2) }}%
+                                        {% else %}
+                                            0%
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="form-actions">
+        <a href="{{ ea_url()
+            .setController('Tourze\\HotelProfileBundle\\Controller\\Admin\\HotelContractCrudController')
+            .setAction('detail')
+            .setEntityId(contract.id)
+        }}" class="btn btn-secondary">返回合同详情</a>
+    </div>
+{% endblock %}

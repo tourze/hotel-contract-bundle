@@ -20,15 +20,15 @@ class HotelContractFixtures extends Fixture implements DependentFixtureInterface
 {
     // 定义引用常量，以便其他Fixture使用
     public const CONTRACT_REFERENCE_PREFIX = 'contract-';
-    
+
     public function load(ObjectManager $manager): void
     {
         // 使用随机ID避免合同编号冲突
         $randomPrefix = substr(md5(uniqid()), 0, 6);
-        
+
         // 为每个五星级酒店创建多个合同，测试优先级
         $this->createContractsForHotel(
-            $manager, 
+            $manager,
             $this->getReference(HotelFixtures::FIVE_STAR_HOTEL_REFERENCE, Hotel::class),
             [
                 [
@@ -69,10 +69,10 @@ class HotelContractFixtures extends Fixture implements DependentFixtureInterface
             1,
             $randomPrefix . 'A'
         );
-        
+
         // 为四星级酒店创建合同
         $this->createContractsForHotel(
-            $manager, 
+            $manager,
             $this->getReference(HotelFixtures::FOUR_STAR_HOTEL_REFERENCE, Hotel::class),
             [
                 [
@@ -101,10 +101,10 @@ class HotelContractFixtures extends Fixture implements DependentFixtureInterface
             4,
             $randomPrefix . 'B'
         );
-        
+
         // 为三星级酒店创建合同
         $this->createContractsForHotel(
-            $manager, 
+            $manager,
             $this->getReference(HotelFixtures::THREE_STAR_HOTEL_REFERENCE, Hotel::class),
             [
                 [
@@ -122,21 +122,21 @@ class HotelContractFixtures extends Fixture implements DependentFixtureInterface
             7,
             $randomPrefix . 'C'
         );
-        
+
         // 为其他几个酒店创建单个合同
         for ($i = 2; $i <= 10; $i++) {
             // 跳过已经创建过合同的酒店
             if ($i == 4 || $i == 7) {
                 continue;
             }
-            
+
             $hotel = $this->getReference(HotelFixtures::HOTEL_REFERENCE_PREFIX . $i, Hotel::class);
             $contractType = $i % 2 == 0 ? ContractTypeEnum::FIXED_PRICE : ContractTypeEnum::DYNAMIC_PRICE;
             $startDate = new \DateTime('first day of this month');
             $endDate = (new \DateTime('first day of next month'))->modify('+' . rand(1, 6) . ' months');
             $totalDays = 7; // 固定为7天
             $totalRooms = rand(10, 25); // 房间数在10-25之间
-            
+
             $contract = new HotelContract();
             $contract->setHotel($hotel);
             $contract->setContractNo('HT' . $randomPrefix . date('md') . str_pad($i, 3, '0', STR_PAD_LEFT));
@@ -145,19 +145,19 @@ class HotelContractFixtures extends Fixture implements DependentFixtureInterface
             $contract->setEndDate($endDate);
             $contract->setTotalRooms($totalRooms);
             $contract->setTotalDays($totalDays);
-            $contract->setTotalAmount((string) (rand(1000, 3000) * $totalDays * $totalRooms / 100));
+            $contract->setTotalAmount((string)(rand(1000, 3000) * $totalDays * $totalRooms / 100));
             $contract->setAttachmentUrl('contract-' . $i . '.pdf');
             $contract->setStatus(ContractStatusEnum::ACTIVE);
             $contract->setPriority(1);
-            
+
             $manager->persist($contract);
             // 使用不同的命名约定，避免冲突
             $this->addReference(self::CONTRACT_REFERENCE_PREFIX . 'other-' . $i, $contract);
         }
-        
+
         $manager->flush();
     }
-    
+
     /**
      * 为指定酒店创建多个合同
      */
@@ -181,23 +181,23 @@ class HotelContractFixtures extends Fixture implements DependentFixtureInterface
             $contract->setAttachmentUrl($contractData['attachmentUrl']);
             $contract->setStatus($contractData['status']);
             $contract->setPriority($contractData['priority']);
-            
+
             if (isset($contractData['terminationReason']) && $contractData['status'] === ContractStatusEnum::TERMINATED) {
                 $contract->setTerminationReason($contractData['terminationReason']);
             }
-            
+
             $manager->persist($contract);
             $this->addReference(self::CONTRACT_REFERENCE_PREFIX . ($startIndex + $index), $contract);
         }
     }
-    
+
     public function getDependencies(): array
     {
         return [
             HotelFixtures::class,
         ];
     }
-    
+
     public static function getGroups(): array
     {
         return ['dev', 'test'];

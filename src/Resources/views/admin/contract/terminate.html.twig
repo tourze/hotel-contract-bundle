@@ -1,0 +1,98 @@
+{% extends '@EasyAdmin/page/content.html.twig' %}
+
+{% block page_title '终止合同 - ' ~ contract.contractNo %}
+{% block page_actions %}
+    <a href="{{ ea_url().setAction('detail').setEntityId(contract.id) }}" class="btn btn-secondary">
+        <i class="fa fa-fw fa-arrow-left"></i> 返回合同详情
+    </a>
+{% endblock %}
+
+{% block main %}
+    <div class="card shadow">
+        <div class="card-header bg-light">
+            <h3 class="card-title mb-0">
+                <i class="fa fa-file-contract text-primary me-2"></i>
+                合同详情
+            </h3>
+        </div>
+        <div class="card-body">
+            <div class="alert alert-warning">
+                <div class="d-flex">
+                    <div class="me-3">
+                        <i class="fa fa-exclamation-triangle fa-2x"></i>
+                    </div>
+                    <div>
+                        <h4 class="alert-heading">操作提示</h4>
+                        <p class="mb-0">合同一旦终止将无法恢复，请谨慎操作！</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row mb-4 mt-4">
+                <div class="col-md-6">
+                    <div class="card bg-light">
+                        <div class="card-body py-3">
+                            <h5 class="border-bottom pb-2 mb-3">基本信息</h5>
+                            <dl class="row mb-0">
+                                <dt class="col-sm-4 text-muted">合同编号：</dt>
+                                <dd class="col-sm-8 fw-bold">{{ contract.contractNo }}</dd>
+                                
+                                <dt class="col-sm-4 text-muted">酒店名称：</dt>
+                                <dd class="col-sm-8">{{ contract.hotel.name }}</dd>
+                                
+                                <dt class="col-sm-4 text-muted">合同类型：</dt>
+                                <dd class="col-sm-8">{{ contract.contractType.label }}</dd>
+                            </dl>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card bg-light">
+                        <div class="card-body py-3">
+                            <h5 class="border-bottom pb-2 mb-3">时间与金额</h5>
+                            <dl class="row mb-0">
+                                <dt class="col-sm-4 text-muted">开始日期：</dt>
+                                <dd class="col-sm-8">{{ contract.startDate|date('Y-m-d') }}</dd>
+                                
+                                <dt class="col-sm-4 text-muted">结束日期：</dt>
+                                <dd class="col-sm-8">{{ contract.endDate|date('Y-m-d') }}</dd>
+                                
+                                <dt class="col-sm-4 text-muted">合同总金额：</dt>
+                                <dd class="col-sm-8"><span class="text-primary fw-bold">{{ contract.totalAmount|number_format(2, '.', ',') }}</span> 元</dd>
+                            </dl>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card bg-light mt-4 mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">请输入终止原因</h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="">
+                        {% if form._token is defined %}
+                            <input type="hidden" name="{{ form._token.vars.full_name }}" value="{{ form._token.vars.value }}" />
+                        {% endif %}
+
+                        <div class="form-group mb-3">
+                            {{ form_label(form.terminationReason) }}
+                            {{ form_widget(form.terminationReason, {'attr': {'class': 'form-control', 'rows': 5, 'placeholder': '请详细说明终止该合同的原因...'}}) }}
+                            {{ form_errors(form.terminationReason) }}
+                            <small class="form-text text-muted">详细的终止原因有助于后期合同分析和评估</small>
+                        </div>
+
+                        <div class="d-flex justify-content-between mt-4">
+                            <a href="{{ ea_url().setAction('detail').setEntityId(contract.id) }}" class="btn btn-secondary">
+                                <i class="fa fa-times me-1"></i> 取消
+                            </a>
+                            <button type="submit" class="btn btn-danger">
+                                <i class="fa fa-ban me-1"></i> 确认终止合同
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
