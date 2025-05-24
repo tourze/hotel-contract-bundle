@@ -2,13 +2,12 @@
 
 namespace Tourze\HotelContractBundle\Tests\Integration;
 
-use Doctrine\Bundle\DoctrineBundle\DoctrineBundle;
-use Symfony\Bundle\FrameworkBundle\FrameworkBundle;
 use Symfony\Bundle\FrameworkBundle\Kernel\MicroKernelTrait;
 use Symfony\Component\Config\Loader\LoaderInterface;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\HttpKernel\Kernel;
 use Symfony\Component\Routing\Loader\Configurator\RoutingConfigurator;
+use Tourze\BundleDependency\ResolveHelper;
 use Tourze\HotelContractBundle\HotelContractBundle;
 
 class IntegrationTestKernel extends Kernel
@@ -17,11 +16,11 @@ class IntegrationTestKernel extends Kernel
 
     public function registerBundles(): iterable
     {
-        return [
-            new FrameworkBundle(),
-            new DoctrineBundle(),
-            new HotelContractBundle(),
-        ];
+        foreach (ResolveHelper::resolveBundleDependencies([
+            HotelContractBundle::class => ['all' => true],
+        ]) as $bundleClass => $bundleConfig) {
+            yield new $bundleClass();
+        }
     }
 
     protected function configureContainer(ContainerBuilder $container, LoaderInterface $loader): void
@@ -29,6 +28,21 @@ class IntegrationTestKernel extends Kernel
         $container->loadFromExtension('framework', [
             'test' => true,
             'secret' => 'test-secret',
+        ]);
+        $container->loadFromExtension('security', [
+            'providers' => [
+                'test_provider' => [
+                    'memory' => [
+                        'users' => [],
+                    ],
+                ],
+            ],
+            'firewalls' => [
+                'main' => [
+                    'provider' => 'test_provider',
+                    'http_basic' => null,
+                ],
+            ],
         ]);
 
         $container->loadFromExtension('doctrine', [
@@ -55,4 +69,4 @@ class IntegrationTestKernel extends Kernel
     {
         // 测试不需要路由配置
     }
-} 
+}

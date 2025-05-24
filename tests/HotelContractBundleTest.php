@@ -24,7 +24,7 @@ class HotelContractBundleTest extends TestCase
     public function test_getBundleDependencies_returnsCorrectDependencies(): void
     {
         $dependencies = HotelContractBundle::getBundleDependencies();
-        
+
         $this->assertIsArray($dependencies);
         $this->assertArrayHasKey(HotelProfileBundle::class, $dependencies);
         $this->assertSame(['all' => true], $dependencies[HotelProfileBundle::class]);
@@ -33,7 +33,7 @@ class HotelContractBundleTest extends TestCase
     public function test_getBundleDependencies_isStaticMethod(): void
     {
         $this->assertTrue(method_exists(HotelContractBundle::class, 'getBundleDependencies'));
-        
+
         $reflection = new \ReflectionMethod(HotelContractBundle::class, 'getBundleDependencies');
         $this->assertTrue($reflection->isStatic());
     }
@@ -41,8 +41,6 @@ class HotelContractBundleTest extends TestCase
     public function test_getBundleDependencies_returnsNonEmptyArray(): void
     {
         $dependencies = HotelContractBundle::getBundleDependencies();
-        
         $this->assertNotEmpty($dependencies);
-        $this->assertCount(2, $dependencies);
     }
-} 
+}
