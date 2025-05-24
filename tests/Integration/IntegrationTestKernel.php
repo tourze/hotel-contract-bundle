@@ -67,7 +67,11 @@ class IntegrationTestKernel extends Kernel
             ],
             'orm' => [
                 'auto_generate_proxy_classes' => true,
-                'auto_mapping' => true,
+                'controller_resolver' => [
+                    'auto_mapping' => false,
+                ],
+                'enable_lazy_ghost_objects' => true,
+                'naming_strategy' => 'doctrine.orm.naming_strategy.underscore_number_aware',
                 'mappings' => [
                     'HotelContractBundle' => [
                         'is_bundle' => true,
