@@ -26,8 +26,23 @@ class IntegrationTestKernel extends Kernel
     protected function configureContainer(ContainerBuilder $container, LoaderInterface $loader): void
     {
         $container->loadFromExtension('framework', [
+            'secret' => 'TEST_SECRET',
             'test' => true,
-            'secret' => 'test-secret',
+            'http_method_override' => false,
+            'handle_all_throwables' => true,
+            'router' => [
+                'utf8' => true,
+            ],
+            'php_errors' => [
+                'log' => true,
+            ],
+            'validation' => [
+                'email_validation_mode' => 'html5',
+            ],
+            'uid' => [
+                'default_uuid_version' => 7,
+                'time_based_uuid_version' => 7,
+            ],
         ]);
         $container->loadFromExtension('security', [
             'providers' => [
