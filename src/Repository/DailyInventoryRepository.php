@@ -233,9 +233,9 @@ class DailyInventoryRepository extends ServiceEntityRepository
     public function findByDateRangeAndWeekdays(
         \DateTimeInterface $startDate,
         \DateTimeInterface $endDate,
-        array              $criteria = [],
-        string             $dayFilter = null,
-        array              $days = []
+        array $criteria = [],
+        ?string $dayFilter = null,
+        array $days = []
     ): array
     {
         $qb = $this->createQueryBuilder('di')
