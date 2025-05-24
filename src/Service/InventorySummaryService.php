@@ -3,7 +3,6 @@
 namespace Tourze\HotelContractBundle\Service;
 
 use Doctrine\ORM\EntityManagerInterface;
-use Tourze\HotelContractBundle\Config\InventoryConfig;
 use Tourze\HotelContractBundle\Entity\DailyInventory;
 use Tourze\HotelContractBundle\Entity\HotelContract;
 use Tourze\HotelContractBundle\Entity\InventorySummary;
@@ -20,6 +19,7 @@ class InventorySummaryService
         private readonly EntityManagerInterface $entityManager,
         private readonly DailyInventoryRepository $inventoryRepository,
         private readonly InventorySummaryRepository $inventorySummaryRepository,
+        private readonly InventoryConfig $inventoryConfig,
     ) {
     }
 
@@ -95,7 +95,7 @@ class InventorySummaryService
             $availablePercent = $result['totalRooms'] > 0 ? ($result['availableRooms'] / $result['totalRooms'] * 100) : 0;
 
             // 获取预警阈值
-            $warningConfig = InventoryConfig::getWarningConfig();
+            $warningConfig = $this->inventoryConfig->getWarningConfig();
             $warningThreshold = $warningConfig['warning_threshold'] ?? 10;
 
             if ($availablePercent <= 0) {
@@ -271,7 +271,7 @@ class InventorySummaryService
         $summary->setPendingRooms($pendingRooms);
 
         // 获取预警阈值
-        $warningConfig = InventoryConfig::getWarningConfig();
+        $warningConfig = $this->inventoryConfig->getWarningConfig();
         $warningThreshold = $warningConfig['warning_threshold'] ?? 10;
 
         // 设置状态

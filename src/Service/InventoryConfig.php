@@ -1,6 +1,6 @@
 <?php
 
-namespace Tourze\HotelContractBundle\Config;
+namespace Tourze\HotelContractBundle\Service;
 
 use Tourze\EnvManageBundle\Entity\Env;
 use Tourze\EnvManageBundle\Repository\EnvRepository;

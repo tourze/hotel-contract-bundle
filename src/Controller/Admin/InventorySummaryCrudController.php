@@ -4,6 +4,7 @@ namespace Tourze\HotelContractBundle\Controller\Admin;
 
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\QueryBuilder;
+use EasyCorp\Bundle\EasyAdminBundle\Attribute\AdminAction;
 use EasyCorp\Bundle\EasyAdminBundle\Collection\FieldCollection;
 use EasyCorp\Bundle\EasyAdminBundle\Collection\FilterCollection;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Action;
@@ -22,9 +23,13 @@ use EasyCorp\Bundle\EasyAdminBundle\Field\IntegerField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\MoneyField;
 use EasyCorp\Bundle\EasyAdminBundle\Filter\DateTimeFilter;
 use EasyCorp\Bundle\EasyAdminBundle\Filter\EntityFilter;
+use EasyCorp\Bundle\EasyAdminBundle\Router\AdminUrlGenerator;
+use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\RequestStack;
+use Symfony\Component\HttpFoundation\Response;
 use Tourze\HotelContractBundle\Entity\InventorySummary;
 use Tourze\HotelContractBundle\Enum\InventorySummaryStatusEnum;
+use Tourze\HotelContractBundle\Service\InventoryConfig;
 use Tourze\HotelContractBundle\Service\InventorySummaryService;
 
 class InventorySummaryCrudController extends AbstractCrudController
@@ -32,7 +37,9 @@ class InventorySummaryCrudController extends AbstractCrudController
     public function __construct(
         private readonly EntityManagerInterface $entityManager,
         private readonly InventorySummaryService $summaryService,
-        private readonly RequestStack $requestStack
+        private readonly RequestStack $requestStack,
+        private readonly InventoryConfig $inventoryConfig,
+        private readonly AdminUrlGenerator $adminUrlGenerator,
     ) {
     }
 
@@ -305,7 +312,8 @@ class InventorySummaryCrudController extends AbstractCrudController
     /**
      * 同步库存统计数据
      */
-    public function syncInventorySummary()
+    #[AdminAction('sync', 'sync')]
+    public function syncInventorySummary(Request $request): Response
     {
         $result = $this->summaryService->syncInventorySummary();
 
@@ -315,21 +323,19 @@ class InventorySummaryCrudController extends AbstractCrudController
             $this->addFlash('danger', $result['message']);
         }
 
-        return $this->redirect($this->generateUrl('admin', [
-            'crudAction' => 'index',
-            'crudControllerFqcn' => self::class,
-        ]));
+        return $this->redirect($request->headers->get('referer'));
     }
 
     /**
      * 库存预警配置页面
      */
-    public function inventoryWarningConfig()
+    #[AdminAction('warn', 'warn', methods: ['GET', 'POST'])]
+    public function inventoryWarningConfig(): Response
     {
         $request = $this->requestStack->getCurrentRequest();
 
         // 加载当前配置
-        $config = \Tourze\HotelContractBundle\Config\InventoryConfig::getWarningConfig();
+        $config = $this->inventoryConfig->getWarningConfig();
 
         if ($request->isMethod('POST')) {
             // 处理表单提交
@@ -346,22 +352,17 @@ class InventorySummaryCrudController extends AbstractCrudController
                 'warning_interval' => max(1, $warningInterval),
             ];
 
-            if (\Tourze\HotelContractBundle\Config\InventoryConfig::saveWarningConfig($newConfig)) {
+            if ($this->inventoryConfig->saveWarningConfig($newConfig)) {
                 $this->addFlash('success', '库存预警配置已保存');
 
                 // 同时更新所有库存状态
                 $this->summaryService->updateInventorySummaryStatus($newConfig['warning_threshold']);
-
-                return $this->redirect($this->generateUrl('admin', [
-                    'crudAction' => 'index',
-                    'crudControllerFqcn' => self::class,
-                ]));
             } else {
                 $this->addFlash('danger', '保存配置失败');
             }
         }
 
-        return $this->render('admin/inventory/inventory_warning.html.twig', [
+        return $this->render('@HotelContract/admin/inventory/inventory_warning.html.twig', [
             'warning_threshold' => $config['warning_threshold'],
             'email_recipients' => $config['email_recipients'],
             'enable_warning' => $config['enable_warning'],

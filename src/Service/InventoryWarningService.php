@@ -6,7 +6,6 @@ use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\Mime\Email;
-use Tourze\HotelContractBundle\Config\InventoryConfig;
 use Tourze\HotelContractBundle\Entity\InventorySummary;
 use Tourze\HotelContractBundle\Enum\InventorySummaryStatusEnum;
 
@@ -17,7 +16,8 @@ class InventoryWarningService
     public function __construct(
         private readonly EntityManagerInterface $entityManager,
         private readonly MailerInterface $mailer,
-        private readonly LoggerInterface $logger
+        private readonly LoggerInterface $logger,
+        private readonly InventoryConfig $inventoryConfig,
     ) {
     }
 
@@ -29,7 +29,7 @@ class InventoryWarningService
      */
     public function checkAndSendWarnings(?\DateTimeInterface $date = null): array
     {
-        $config = InventoryConfig::getWarningConfig();
+        $config = $this->inventoryConfig->getWarningConfig();
         
         // 如果未启用预警功能，直接返回
         if (!$config['enable_warning']) {

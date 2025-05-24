@@ -1,0 +1,50 @@
+{% extends '@EasyAdmin/page/content.html.twig' %}
+
+{% block page_title %}库存预警设置{% endblock %}
+
+{% block content_title %}库存预警设置{% endblock %}
+
+{% block main %}
+<div class="card">
+    <div class="card-body">
+        <form method="post" action="">
+            <div class="form-group">
+                <label for="warning_threshold">库存预警阈值</label>
+                <div class="input-group">
+                    <input type="number" id="warning_threshold" name="warning_threshold" class="form-control" min="1" max="100" value="{{ warning_threshold|default(10) }}" required>
+                    <div class="input-group-append">
+                        <span class="input-group-text">%</span>
+                    </div>
+                </div>
+                <small class="form-text text-muted">当库存可用率低于设定阈值时触发预警</small>
+            </div>
+
+            <div class="form-group">
+                <label for="email_recipients">预警通知邮箱地址</label>
+                <textarea id="email_recipients" name="email_recipients" class="form-control" rows="3" placeholder="每行输入一个邮箱地址">{{ email_recipients|default('') }}</textarea>
+                <small class="form-text text-muted">预警消息将发送到这些邮箱地址，多个地址请换行分隔</small>
+            </div>
+
+            <div class="form-check mb-3">
+                <input type="checkbox" class="form-check-input" id="enable_warning" name="enable_warning" {{ enable_warning|default(true) ? 'checked' : '' }}>
+                <label class="form-check-label" for="enable_warning">启用库存预警</label>
+            </div>
+
+            <div class="form-group">
+                <label for="warning_interval">预警发送间隔</label>
+                <div class="input-group">
+                    <input type="number" id="warning_interval" name="warning_interval" class="form-control" min="1" value="{{ warning_interval|default(24) }}" required>
+                    <div class="input-group-append">
+                        <span class="input-group-text">小时</span>
+                    </div>
+                </div>
+                <small class="form-text text-muted">同一预警多久发送一次，避免频繁收到相同预警</small>
+            </div>
+
+            <button type="submit" class="btn btn-primary">
+                <i class="fa fa-save"></i> 保存设置
+            </button>
+        </form>
+    </div>
+</div>
+{% endblock %}
