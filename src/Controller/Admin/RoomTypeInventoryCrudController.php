@@ -76,16 +76,10 @@ class RoomTypeInventoryCrudController extends AbstractCrudController
             ->createAsGlobalAction()
             ->setIcon('fa fa-magic');
 
-        $batchPriceUpdate = Action::new('batchPriceUpdate', '批量调价')
-            ->linkToCrudAction('batchPriceUpdateForm')
-            ->createAsGlobalAction()
-            ->setIcon('fa fa-money-bill-wave');
-
         return $actions
             ->add(Crud::PAGE_INDEX, Action::DETAIL)
             ->add(Crud::PAGE_INDEX, $batchCreateInventory)
             ->add(Crud::PAGE_INDEX, $generateAllContractInventory)
-            ->add(Crud::PAGE_INDEX, $batchPriceUpdate)
             ->update(Crud::PAGE_INDEX, Action::NEW, function (Action $action) {
                 return $action->setLabel('添加库存');
             });
@@ -606,6 +600,9 @@ class RoomTypeInventoryCrudController extends AbstractCrudController
     public function batchPriceUpdateProcess(Request $request): Response
     {
         // 调用价格管理的批量调价功能
-        return $this->redirectToRoute('admin_price_batch_adjustment');
+        return $this->redirect($this->generateUrl('admin', [
+            'crudAction' => 'batchPriceAdjustment',
+            'crudControllerFqcn' => InventorySummaryCrudController::class,
+        ]));
     }
 }

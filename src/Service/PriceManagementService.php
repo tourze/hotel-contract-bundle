@@ -1,20 +1,18 @@
 <?php
 
-namespace Tourze\HotelContractBundle\Controller\Admin;
+namespace Tourze\HotelContractBundle\Service;
 
 use Doctrine\ORM\EntityManagerInterface;
-use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
-use Symfony\Component\HttpFoundation\Request;
-use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\Routing\Annotation\Route;
+use Psr\Log\LoggerInterface;
 use Tourze\HotelContractBundle\Repository\DailyInventoryRepository;
 use Tourze\HotelContractBundle\Repository\HotelContractRepository;
-use Tourze\HotelContractBundle\Service\InventoryUpdateService;
 use Tourze\HotelProfileBundle\Repository\HotelRepository;
 use Tourze\HotelProfileBundle\Repository\RoomTypeRepository;
 
-#[Route('/admin/price')]
-class PriceManagementController extends AbstractController
+/**
+ * 价格管理服务
+ */
+class PriceManagementService
 {
     public function __construct(
         private readonly EntityManagerInterface $entityManager,
@@ -22,19 +20,16 @@ class PriceManagementController extends AbstractController
         private readonly HotelRepository $hotelRepository,
         private readonly RoomTypeRepository $roomTypeRepository,
         private readonly HotelContractRepository $contractRepository,
-        private readonly DailyInventoryRepository $dailyInventoryRepository
+        private readonly DailyInventoryRepository $dailyInventoryRepository,
+        private readonly LoggerInterface $logger,
     ) {
     }
 
     /**
-     * 合同价格日历管理
+     * 获取合同价格日历数据
      */
-    #[Route('/contract-calendar', name: 'admin_price_contract_calendar')]
-    public function contractPriceCalendar(Request $request): Response
+    public function getContractPriceCalendarData(?int $contractId, string $month): array
     {
-        $contractId = $request->query->get('contract');
-        $month = $request->query->get('month', date('Y-m'));
-        
         $contract = null;
         if ($contractId) {
             $contract = $this->contractRepository->find($contractId);
@@ -42,21 +37,21 @@ class PriceManagementController extends AbstractController
 
         // 获取所有合同供选择
         $contracts = $this->contractRepository->findBy([], ['priority' => 'ASC', 'id' => 'DESC']);
-        
+
         // 解析年月
         list($year, $monthNum) = explode('-', $month);
         $startDate = new \DateTime("$year-$monthNum-01");
         $endDate = clone $startDate;
         $endDate->modify('last day of this month');
-        
+
         $calendarData = [];
         $roomTypes = [];
-        
+
         if ($contract) {
             // 获取该合同关联的房型
             $roomTypeIds = $this->dailyInventoryRepository->findDistinctRoomTypesByContract($contract->getId());
             $roomTypes = $this->roomTypeRepository->findBy(['id' => $roomTypeIds]);
-            
+
             // 获取日期范围内的价格数据
             $priceData = $this->dailyInventoryRepository->findPriceDataByContractAndDateRange(
                 $contract->getId(),
@@ -68,55 +63,53 @@ class PriceManagementController extends AbstractController
             $calendarData = $this->organizeCalendarData($startDate, $endDate, $roomTypes, $priceData);
         }
 
-        return $this->render('@HotelContract/admin/price/contract_calendar.html.twig', [
+        return [
             'contracts' => $contracts,
             'selectedContract' => $contract,
             'month' => $month,
             'calendarData' => $calendarData,
             'roomTypes' => $roomTypes,
             'currentMonth' => $startDate->format('Y年m月')
-        ]);
+        ];
     }
 
     /**
      * 更新合同价格
      */
-    #[Route('/update-contract-price', name: 'admin_price_update_contract_price', methods: ['POST'])]
-    public function updateContractPrice(Request $request): Response
+    public function updateContractPrice(int $inventoryId, string $costPrice): array
     {
-        $inventoryId = $request->request->get('inventory_id');
-        $costPrice = $request->request->get('cost_price');
-        $redirectUrl = $request->request->get('redirect_url', $this->generateUrl('admin_price_contract_calendar'));
-        
-        if (!$inventoryId || $costPrice === null) {
-            $this->addFlash('danger', '参数错误');
-            return $this->redirect($redirectUrl);
+        try {
+            // 查找并更新价格
+            $inventory = $this->dailyInventoryRepository->find($inventoryId);
+            if (!$inventory) {
+                return ['success' => false, 'message' => '库存记录不存在'];
+            }
+            
+            $inventory->setCostPrice($costPrice);
+            $this->entityManager->flush();
+            
+            $this->logger->info('合同价格更新成功', [
+                'inventory_id' => $inventoryId,
+                'cost_price' => $costPrice
+            ]);
+            
+            return ['success' => true, 'message' => '价格更新成功'];
+        } catch (\Exception $e) {
+            $this->logger->error('合同价格更新失败', [
+                'inventory_id' => $inventoryId,
+                'cost_price' => $costPrice,
+                'exception' => $e
+            ]);
+            
+            return ['success' => false, 'message' => '价格更新失败'];
         }
-        
-        // 查找并更新价格
-        $inventory = $this->dailyInventoryRepository->find($inventoryId);
-        if (!$inventory) {
-            $this->addFlash('danger', '库存记录不存在');
-            return $this->redirect($redirectUrl);
-        }
-        
-        $inventory->setCostPrice((string)$costPrice);
-        $this->entityManager->flush();
-        
-        $this->addFlash('success', '价格更新成功');
-        return $this->redirect($redirectUrl);
     }
 
     /**
-     * 销售价格管理
+     * 获取销售价格数据
      */
-    #[Route('/selling-price', name: 'admin_price_selling_price')]
-    public function sellingPrice(Request $request): Response
+    public function getSellingPriceData(?int $hotelId, ?int $roomTypeId, string $month): array
     {
-        $hotelId = $request->query->get('hotel');
-        $roomTypeId = $request->query->get('room_type');
-        $month = $request->query->get('month', date('Y-m'));
-        
         $hotel = null;
         $roomType = null;
         
@@ -166,7 +159,7 @@ class PriceManagementController extends AbstractController
             $calendarData = $this->organizeSellingPriceData($startDate, $endDate, $displayRoomTypes, $priceData);
         }
 
-        return $this->render('@HotelContract/admin/price/selling_price.html.twig', [
+        return [
             'hotels' => $hotels,
             'selectedHotel' => $hotel,
             'roomTypes' => $roomTypes,
@@ -174,109 +167,203 @@ class PriceManagementController extends AbstractController
             'month' => $month,
             'calendarData' => $calendarData,
             'currentMonth' => $startDate->format('Y年m月')
-        ]);
+        ];
     }
 
     /**
      * 更新销售价格
      */
-    #[Route('/update-selling-price', name: 'admin_price_update_selling_price', methods: ['POST'])]
-    public function updateSellingPrice(Request $request): Response
+    public function updateSellingPrice(int $inventoryId, string $sellingPrice): array
     {
-        $inventoryId = $request->request->get('inventory_id');
-        $sellingPrice = $request->request->get('selling_price');
-        $redirectUrl = $request->request->get('redirect_url', $this->generateUrl('admin_price_selling_price'));
-        
-        if (!$inventoryId || $sellingPrice === null) {
-            $this->addFlash('danger', '参数错误');
-            return $this->redirect($redirectUrl);
+        try {
+            // 查找并更新价格
+            $inventory = $this->dailyInventoryRepository->find($inventoryId);
+            if (!$inventory) {
+                return ['success' => false, 'message' => '库存记录不存在'];
+            }
+            
+            $inventory->setSellingPrice($sellingPrice);
+            $this->entityManager->flush();
+            
+            $this->logger->info('销售价格更新成功', [
+                'inventory_id' => $inventoryId,
+                'selling_price' => $sellingPrice
+            ]);
+            
+            return ['success' => true, 'message' => '销售价格更新成功'];
+        } catch (\Exception $e) {
+            $this->logger->error('销售价格更新失败', [
+                'inventory_id' => $inventoryId,
+                'selling_price' => $sellingPrice,
+                'exception' => $e
+            ]);
+
+            return ['success' => false, 'message' => '销售价格更新失败'];
         }
-        
-        // 查找并更新价格
-        $inventory = $this->dailyInventoryRepository->find($inventoryId);
-        if (!$inventory) {
-            $this->addFlash('danger', '库存记录不存在');
-            return $this->redirect($redirectUrl);
-        }
-        
-        $inventory->setSellingPrice((string)$sellingPrice);
-        $this->entityManager->flush();
-        
-        $this->addFlash('success', '销售价格更新成功');
-        return $this->redirect($redirectUrl);
     }
 
     /**
-     * 批量调价页面
+     * 获取批量调价页面数据
      */
-    #[Route('/batch-adjustment', name: 'admin_price_batch_adjustment')]
-    public function batchPriceAdjustment(Request $request): Response
+    public function getBatchAdjustmentData(): array
     {
-        if ($request->isMethod('POST')) {
-            $hotelId = $request->request->get('hotel');
-            $roomTypeId = $request->request->get('room_type');
-            $startDate = $request->request->get('start_date');
-            $endDate = $request->request->get('end_date');
-            $priceType = $request->request->get('price_type');
-            $adjustMethod = $request->request->get('adjust_method');
-            $dayFilter = $request->request->get('day_filter');
-            $days = $request->request->get('days', []);
-            $reason = $request->request->get('reason');
-            
-            if (!$hotelId || !$startDate || !$endDate) {
-                $this->addFlash('danger', '请填写必要的参数');
-                return $this->redirectToRoute('admin_price_batch_adjustment');
-            }
-            
-            $hotel = $this->hotelRepository->find($hotelId);
-            $roomType = $roomTypeId ? $this->roomTypeRepository->find($roomTypeId) : null;
-            
-            if (!$hotel) {
-                $this->addFlash('danger', '酒店不存在');
-                return $this->redirectToRoute('admin_price_batch_adjustment');
-            }
-            
-            // 准备调价参数
-            $params = [
-                'hotel' => $hotel,
-                'room_type' => $roomType,
-                'start_date' => new \DateTime($startDate),
-                'end_date' => new \DateTime($endDate),
-                'price_type' => $priceType,
-                'adjust_method' => $adjustMethod,
-                'day_filter' => $dayFilter,
-                'days' => $days,
-                'reason' => $reason,
-            ];
-            
-            // 根据调整方式设置价格值
-            if ($adjustMethod === 'fixed') {
-                $params['cost_price'] = $request->request->get('price_value');
-                $params['selling_price'] = $request->request->get('price_value');
-            } else {
-                $params['adjust_value'] = $request->request->get('adjust_value');
-            }
-            
-            // 调用批量调价服务
-            $result = $this->updateService->batchUpdateInventoryPrice($params);
-            
-            if ($result && $result['success']) {
-                $this->addFlash('success', $result['message']);
-            } else {
-                $this->addFlash('danger', $result ? $result['message'] : '调价失败');
-            }
-            
-            return $this->redirectToRoute('admin_price_batch_adjustment');
-        }
-
-        // 获取所有酒店和房型供选择
         $hotels = $this->hotelRepository->findAll();
         $roomTypes = $this->roomTypeRepository->findAll();
 
-        return $this->render('@HotelContract/admin/price/batch_adjustment.html.twig', [
+        return [
             'hotels' => $hotels,
             'room_types' => $roomTypes,
-        ]);
+        ];
+    }
+
+    /**
+     * 批量调价处理
+     */
+    public function processBatchPriceAdjustment(array $params): array
+    {
+        try {
+            // 处理简化的单日期调价参数
+            if (isset($params['date']) && isset($params['room_type_id'])) {
+                return $this->processSingleDatePriceAdjustment($params);
+            }
+            
+            // 处理完整的批量调价参数
+            $hotel = $this->hotelRepository->find($params['hotel_id']);
+            $roomType = $params['room_type_id'] ? $this->roomTypeRepository->find($params['room_type_id']) : null;
+
+            if (!$hotel) {
+                return ['success' => false, 'message' => '酒店不存在'];
+            }
+
+            // 准备调价参数
+            $adjustmentParams = [
+                'hotel' => $hotel,
+                'room_type' => $roomType,
+                'start_date' => new \DateTime($params['start_date']),
+                'end_date' => new \DateTime($params['end_date']),
+                'price_type' => $params['price_type'],
+                'adjust_method' => $params['adjust_method'],
+                'day_filter' => $params['day_filter'],
+                'days' => $params['days'] ?? [],
+                'reason' => $params['reason'],
+            ];
+            
+            // 根据调整方式设置价格值
+            if ($params['adjust_method'] === 'fixed') {
+                $adjustmentParams['cost_price'] = $params['price_value'];
+                $adjustmentParams['selling_price'] = $params['price_value'];
+            } else {
+                $adjustmentParams['adjust_value'] = $params['adjust_value'];
+            }
+            
+            // 调用批量调价服务
+            $result = $this->updateService->batchUpdateInventoryPrice($adjustmentParams);
+            
+            $this->logger->info('批量调价执行', [
+                'params' => $adjustmentParams,
+                'result' => $result
+            ]);
+            
+            return $result ?: ['success' => false, 'message' => '调价失败'];
+        } catch (\Exception $e) {
+            $this->logger->error('批量调价失败', [
+                'params' => $params,
+                'exception' => $e
+            ]);
+            
+            return ['success' => false, 'message' => '调价失败：' . $e->getMessage()];
+        }
+    }
+
+    /**
+     * 处理单日期价格调整
+     */
+    private function processSingleDatePriceAdjustment(array $params): array
+    {
+        try {
+            $roomType = $this->roomTypeRepository->find($params['room_type_id']);
+            $date = new \DateTime($params['date']);
+            $priceType = $params['price_type'] ?? 'cost_price';
+            $adjustMethod = $params['adjust_method'];
+            
+            if (!$roomType) {
+                return ['success' => false, 'message' => '房型不存在'];
+            }
+            
+            // 查找该日期该房型的所有库存
+            $inventories = $this->dailyInventoryRepository->findBy([
+                'roomType' => $roomType,
+                'date' => $date,
+            ]);
+            
+            if (empty($inventories)) {
+                return ['success' => false, 'message' => '未找到相关库存数据'];
+            }
+            
+            $updateCount = 0;
+            
+            foreach ($inventories as $inventory) {
+                $currentPrice = $priceType === 'cost_price' ? $inventory->getCostPrice() : $inventory->getSellingPrice();
+                $newPrice = 0;
+                
+                // 根据调整方式计算新价格
+                switch ($adjustMethod) {
+                    case 'fixed':
+                        $newPrice = $params['price_value'];
+                        break;
+                    case 'percent':
+                        $newPrice = $currentPrice * (1 + $params['adjust_value'] / 100);
+                        break;
+                    case 'increment':
+                        $newPrice = $currentPrice + $params['adjust_value'];
+                        break;
+                    case 'decrement':
+                        $newPrice = $currentPrice - $params['adjust_value'];
+                        break;
+                    case 'profit_rate':
+                        if ($priceType === 'selling_price' && isset($params['profit_rate'])) {
+                            $costPrice = $inventory->getCostPrice();
+                            $newPrice = $costPrice * (1 + $params['profit_rate'] / 100);
+                        }
+                        break;
+                }
+                
+                // 确保价格不为负数
+                $newPrice = max(0, $newPrice);
+                
+                // 更新价格
+                if ($priceType === 'cost_price') {
+                    $inventory->setCostPrice($newPrice);
+                } else {
+                    $inventory->setSellingPrice($newPrice);
+                }
+                
+                $updateCount++;
+            }
+            
+            $this->entityManager->flush();
+            
+            $this->logger->info('单日期价格调整成功', [
+                'room_type_id' => $params['room_type_id'],
+                'date' => $params['date'],
+                'price_type' => $priceType,
+                'adjust_method' => $adjustMethod,
+                'update_count' => $updateCount
+            ]);
+            
+            return [
+                'success' => true, 
+                'message' => "成功调整 {$updateCount} 个库存的价格"
+            ];
+            
+        } catch (\Exception $e) {
+            $this->logger->error('单日期价格调整失败', [
+                'params' => $params,
+                'exception' => $e
+            ]);
+            
+            return ['success' => false, 'message' => '调价失败：' . $e->getMessage()];
+        }
     }
 
     /**

@@ -23,7 +23,6 @@ use EasyCorp\Bundle\EasyAdminBundle\Field\IntegerField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\MoneyField;
 use EasyCorp\Bundle\EasyAdminBundle\Filter\DateTimeFilter;
 use EasyCorp\Bundle\EasyAdminBundle\Filter\EntityFilter;
-use EasyCorp\Bundle\EasyAdminBundle\Router\AdminUrlGenerator;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\RequestStack;
@@ -33,6 +32,7 @@ use Tourze\HotelContractBundle\Entity\InventorySummary;
 use Tourze\HotelContractBundle\Enum\InventorySummaryStatusEnum;
 use Tourze\HotelContractBundle\Service\InventoryConfig;
 use Tourze\HotelContractBundle\Service\InventorySummaryService;
+use Tourze\HotelContractBundle\Service\PriceManagementService;
 
 class InventorySummaryCrudController extends AbstractCrudController
 {
@@ -41,7 +41,7 @@ class InventorySummaryCrudController extends AbstractCrudController
         private readonly InventorySummaryService $summaryService,
         private readonly RequestStack $requestStack,
         private readonly InventoryConfig $inventoryConfig,
-        private readonly AdminUrlGenerator $adminUrlGenerator,
+        private readonly PriceManagementService $priceManagementService,
     ) {
     }
 
@@ -80,11 +80,32 @@ class InventorySummaryCrudController extends AbstractCrudController
             ->setCssClass('btn btn-warning')
             ->setIcon('fa fa-bell');
 
+        $contractPriceCalendar = Action::new('contractPriceCalendar', '合同价格日历')
+            ->linkToCrudAction('contractPriceCalendar')
+            ->createAsGlobalAction()
+            ->setCssClass('btn btn-secondary')
+            ->setIcon('fa fa-calendar-alt');
+
+        $sellingPriceManagement = Action::new('sellingPriceManagement', '销售价格管理')
+            ->linkToCrudAction('sellingPriceManagement')
+            ->createAsGlobalAction()
+            ->setCssClass('btn btn-info')
+            ->setIcon('fa fa-tag');
+
+        $batchPriceAdjustment = Action::new('batchPriceAdjustment', '批量调价')
+            ->linkToCrudAction('batchPriceAdjustment')
+            ->createAsGlobalAction()
+            ->setCssClass('btn btn-dark')
+            ->setIcon('fa fa-money-bill-wave');
+
         return $actions
             ->add(Crud::PAGE_INDEX, Action::DETAIL)
             ->add(Crud::PAGE_INDEX, $export)
             ->add(Crud::PAGE_INDEX, $sync)
             ->add(Crud::PAGE_INDEX, $warningConfig)
+            ->add(Crud::PAGE_INDEX, $contractPriceCalendar)
+            ->add(Crud::PAGE_INDEX, $sellingPriceManagement)
+            ->add(Crud::PAGE_INDEX, $batchPriceAdjustment)
             ->disable(Action::NEW, Action::EDIT, Action::DELETE)
             ->update(Crud::PAGE_INDEX, Action::DETAIL, function (Action $action) {
                 return $action->setLabel('详情');
@@ -371,4 +392,220 @@ class InventorySummaryCrudController extends AbstractCrudController
             'warning_interval' => $config['warning_interval'],
         ]);
     }
-} 
+
+    /**
+     * 合同价格日历管理
+     */
+    #[AdminAction('contract-calendar', 'contract_price_calendar')]
+    public function contractPriceCalendar(Request $request): Response
+    {
+        if ($request->isMethod('POST')) {
+            return $this->updateContractPrice();
+        }
+
+        $request = $this->requestStack->getCurrentRequest();
+        $contractId = $request->query->get('contract');
+        $month = $request->query->get('month', date('Y-m'));
+
+        $data = $this->priceManagementService->getContractPriceCalendarData($contractId ? (int)$contractId : null, $month);
+
+        return $this->render('@HotelContract/admin/price/contract_calendar.html.twig', $data);
+    }
+
+    /**
+     * 更新合同价格
+     */
+    private function updateContractPrice(): Response
+    {
+        $request = $this->requestStack->getCurrentRequest();
+        $inventoryId = $request->request->get('inventory_id');
+        $costPrice = $request->request->get('cost_price');
+        $redirectUrl = $request->request->get('redirect_url', $request->headers->get('referer'));
+
+        if (!$inventoryId || $costPrice === null) {
+            $this->addFlash('danger', '参数错误');
+            return $this->redirect($redirectUrl);
+        }
+
+        $result = $this->priceManagementService->updateContractPrice((int)$inventoryId, (string)$costPrice);
+
+        if ($result['success']) {
+            $this->addFlash('success', $result['message']);
+        } else {
+            $this->addFlash('danger', $result['message']);
+        }
+
+        return $this->redirect($redirectUrl);
+    }
+
+    /**
+     * 销售价格管理
+     */
+    #[AdminAction('selling-price', 'selling_price_management')]
+    public function sellingPriceManagement(Request $request): Response
+    {
+        if ($request->isMethod('POST')) {
+            return $this->updateSellingPrice();
+        }
+
+        $request = $this->requestStack->getCurrentRequest();
+        $hotelId = $request->query->get('hotel');
+        $roomTypeId = $request->query->get('room_type');
+        $month = $request->query->get('month', date('Y-m'));
+
+        $data = $this->priceManagementService->getSellingPriceData(
+            $hotelId ? (int)$hotelId : null,
+            $roomTypeId ? (int)$roomTypeId : null,
+            $month
+        );
+
+        return $this->render('@HotelContract/admin/price/selling_price.html.twig', $data);
+    }
+
+    /**
+     * 更新销售价格
+     */
+    #[AdminAction('update-selling-price', 'update_selling_price', methods: ['POST'])]
+    public function updateSellingPrice(): Response
+    {
+        $request = $this->requestStack->getCurrentRequest();
+        $inventoryId = $request->request->get('inventory_id');
+        $sellingPrice = $request->request->get('selling_price');
+        $redirectUrl = $request->request->get('redirect_url', $request->headers->get('referer'));
+
+        if (!$inventoryId || $sellingPrice === null) {
+            $this->addFlash('danger', '参数错误');
+            return $this->redirect($redirectUrl);
+        }
+
+        $result = $this->priceManagementService->updateSellingPrice((int)$inventoryId, (string)$sellingPrice);
+
+        if ($result['success']) {
+            $this->addFlash('success', $result['message']);
+        } else {
+            $this->addFlash('danger', $result['message']);
+        }
+
+        return $this->redirect($redirectUrl);
+    }
+
+    /**
+     * 批量调价页面
+     */
+    #[AdminAction('batch-adjustment', 'batch_price_adjustment', methods: ['GET', 'POST'])]
+    public function batchPriceAdjustment(): Response
+    {
+        $request = $this->requestStack->getCurrentRequest();
+
+        if ($request->isMethod('POST')) {
+            $params = [
+                'hotel_id' => $request->request->get('hotel'),
+                'room_type_id' => $request->request->get('room_type'),
+                'start_date' => $request->request->get('start_date'),
+                'end_date' => $request->request->get('end_date'),
+                'price_type' => $request->request->get('price_type'),
+                'adjust_method' => $request->request->get('adjust_method'),
+                'day_filter' => $request->request->get('day_filter'),
+                'days' => $request->request->get('days', []),
+                'reason' => $request->request->get('reason'),
+                'price_value' => $request->request->get('price_value'),
+                'adjust_value' => $request->request->get('adjust_value'),
+            ];
+
+            if (!$params['hotel_id'] || !$params['start_date'] || !$params['end_date']) {
+                $this->addFlash('danger', '请填写必要的参数');
+                return $this->redirectToCrudAction('batchPriceAdjustment');
+            }
+
+            $result = $this->priceManagementService->processBatchPriceAdjustment($params);
+
+            if ($result['success']) {
+                $this->addFlash('success', $result['message']);
+            } else {
+                $this->addFlash('danger', $result['message']);
+            }
+
+            return $this->redirectToCrudAction('batchPriceAdjustment');
+        }
+
+        $data = $this->priceManagementService->getBatchAdjustmentData();
+
+        return $this->render('@HotelContract/admin/price/batch_adjustment.html.twig', $data);
+    }
+
+    /**
+     * 重定向到 CRUD 操作
+     */
+    private function redirectToCrudAction(string $action): Response
+    {
+        return $this->redirect($this->generateUrl('admin', [
+            'crudAction' => $action,
+            'crudControllerFqcn' => self::class,
+        ]));
+    }
+
+    /**
+     * AJAX更新合同价格
+     */
+    #[AdminAction('ajax-update-contract-price', 'ajax_update_contract_price', methods: ['POST'])]
+    public function ajaxUpdateContractPrice(Request $request): Response
+    {
+        if (!$request->isXmlHttpRequest()) {
+            return $this->json(['success' => false, 'message' => '请求方式不正确'], 400);
+        }
+
+        $inventoryId = $request->request->get('inventory_id');
+        $costPrice = $request->request->get('cost_price');
+
+        if (!$inventoryId || $costPrice === null) {
+            return $this->json(['success' => false, 'message' => '参数错误'], 400);
+        }
+
+        $result = $this->priceManagementService->updateContractPrice((int)$inventoryId, (string)$costPrice);
+        
+        return $this->json($result);
+    }
+
+    /**
+     * AJAX更新销售价格
+     */
+    #[AdminAction('ajax-update-selling-price', 'ajax_update_selling_price', methods: ['POST'])]
+    public function ajaxUpdateSellingPrice(Request $request): Response
+    {
+        if (!$request->isXmlHttpRequest()) {
+            return $this->json(['success' => false, 'message' => '请求方式不正确'], 400);
+        }
+
+        $inventoryId = $request->request->get('inventory_id');
+        $sellingPrice = $request->request->get('selling_price');
+
+        if (!$inventoryId || $sellingPrice === null) {
+            return $this->json(['success' => false, 'message' => '参数错误'], 400);
+        }
+
+        $result = $this->priceManagementService->updateSellingPrice((int)$inventoryId, (string)$sellingPrice);
+        
+        return $this->json($result);
+    }
+
+    /**
+     * AJAX批量价格调整
+     */
+    #[AdminAction('ajax-batch-price', 'ajax_batch_price', methods: ['POST'])]
+    public function ajaxBatchPriceAdjustment(Request $request): Response
+    {
+        if (!$request->isXmlHttpRequest()) {
+            return $this->json(['success' => false, 'message' => '请求方式不正确'], 400);
+        }
+
+        $data = json_decode($request->getContent(), true);
+        
+        if (!$data) {
+            return $this->json(['success' => false, 'message' => '请求数据格式错误'], 400);
+        }
+
+        $result = $this->priceManagementService->processBatchPriceAdjustment($data);
+        
+        return $this->json($result);
+    }
+}

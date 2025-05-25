@@ -32,11 +32,11 @@ use EasyCorp\Bundle\EasyAdminBundle\Filter\TextFilter;
 use EasyCorp\Bundle\EasyAdminBundle\Router\AdminUrlGenerator;
 use Symfony\Component\Form\Extension\Core\Type\TextareaType;
 use Symfony\Component\HttpFoundation\Response;
-use Tourze\HotelContractBundle\Entity\DailyInventory;
 use Tourze\HotelContractBundle\Entity\HotelContract;
 use Tourze\HotelContractBundle\Enum\ContractStatusEnum;
 use Tourze\HotelContractBundle\Enum\ContractTypeEnum;
 use Tourze\HotelContractBundle\Enum\DailyInventoryStatusEnum;
+use Tourze\HotelContractBundle\Repository\DailyInventoryRepository;
 use Tourze\HotelContractBundle\Service\ContractService;
 
 class HotelContractCrudController extends AbstractCrudController
@@ -44,7 +44,7 @@ class HotelContractCrudController extends AbstractCrudController
     public function __construct(
         private readonly ContractService $contractService,
         private readonly AdminUrlGenerator $adminUrlGenerator,
-        private readonly EntityManagerInterface $entityManager,
+        private readonly DailyInventoryRepository $dailyInventoryRepository,
     ) {
     }
 
@@ -357,7 +357,7 @@ class HotelContractCrudController extends AbstractCrudController
         $endDate = (new \DateTime())->modify('+30 days'); // 统计未来30天的库存
         
         // 按房型统计库存情况
-        $inventoryStats = $this->entityManager->getRepository(DailyInventory::class)
+        $inventoryStats = $this->dailyInventoryRepository
             ->createQueryBuilder('di')
             ->select('rt.id as roomTypeId, rt.name as roomTypeName')
             ->addSelect('COUNT(di.id) as totalCount')
@@ -378,7 +378,7 @@ class HotelContractCrudController extends AbstractCrudController
             ->getResult();
 
         // 计算每日库存情况
-        $dailyStatsQuery = $this->entityManager->getRepository(DailyInventory::class)
+        $dailyStatsQuery = $this->dailyInventoryRepository
             ->createQueryBuilder('di')
             ->select('di.date as dateObj')
             ->addSelect('COUNT(di.id) as totalCount')

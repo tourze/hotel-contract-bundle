@@ -7,7 +7,7 @@
 {% block main %}
 <div class="card mb-3">
     <div class="card-body">
-        <form method="get" action="{{ path('admin_price_contract_calendar') }}" class="row">
+        <form method="get" action="" class="row">
             <div class="col-md-5">
                 <div class="form-group">
                     <label for="contract">选择合同</label>
@@ -31,6 +31,25 @@
                 <button type="submit" class="btn btn-primary">查询</button>
             </div>
         </form>
+    </div>
+</div>
+
+<!-- 价格说明区域 -->
+<div class="alert alert-info mb-3">
+    <h6><i class="fa fa-info-circle"></i> 价格说明</h6>
+    <div class="row">
+        <div class="col-md-6">
+            <ul class="mb-0 small">
+                <li>💰 <strong>平均成本价</strong>：该房型当日所有库存的平均采购成本</li>
+                <li>🏠 <strong>房间数</strong>：该房型当日可售库存数量</li>
+            </ul>
+        </div>
+        <div class="col-md-6">
+            <ul class="mb-0 small">
+                <li>📋 <strong>库存明细</strong>：每个具体库存单位的采购成本价</li>
+                <li>🔖 <strong>库存编码</strong>：格式为"日期-序号"，如"06-01-1"表示6月1日第1个库存</li>
+            </ul>
+        </div>
     </div>
 </div>
 
@@ -72,20 +91,29 @@
                                                     {% endfor %}
                                                     {% set avgPrice = (totalPrice / totalRooms)|round(2) %}
                                                     
-                                                    {{ avgPrice }}元 <span class="badge bg-secondary">{{ totalRooms }}间</span>
-                                                    <a href="#" class="edit-price-btn" data-bs-toggle="modal" data-bs-target="#editPriceModal" 
-                                                       data-date="{{ price.date }}" 
-                                                       data-room-type="{{ roomTypeData.roomType.id }}"
-                                                       data-avg-price="{{ avgPrice }}"
-                                                       data-total-rooms="{{ totalRooms }}">
-                                                        <i class="fa fa-edit"></i>
-                                                    </a>
+                                                    <div class="price-summary mb-2">
+                                                        💰 平均成本价: {{ avgPrice }}元 
+                                                        <span class="badge bg-secondary">🏠 {{ totalRooms }}间</span>
+                                                        <a href="#" class="edit-price-btn" data-bs-toggle="modal" data-bs-target="#editPriceModal" 
+                                                           data-date="{{ price.date }}" 
+                                                           data-room-type="{{ roomTypeData.roomType.id }}"
+                                                           data-avg-price="{{ avgPrice }}"
+                                                           data-total-rooms="{{ totalRooms }}">
+                                                            <i class="fa fa-edit"></i>
+                                                        </a>
+                                                    </div>
                                                 </div>
                                                 
-                                                <div class="price-details d-none">
+                                                <div class="price-details">
+                                                    <div class="price-details-header">
+                                                        <small class="text-muted">📋 库存明细 (采购成本价)</small>
+                                                    </div>
                                                     {% for inv in price.inventories %}
                                                         <div class="room-price mb-1">
-                                                            <small>{{ inv.code }}: {{ inv.costPrice }}元</small>
+                                                            <small>
+                                                                🔖 {{ inv.code|split('-')|slice(-2)|join('-') }}: 
+                                                                <span class="text-success">¥{{ inv.costPrice }}</span>
+                                                            </small>
                                                             <a href="#" class="edit-single-price-btn" data-bs-toggle="modal" data-bs-target="#editSinglePriceModal"
                                                                data-inventory-id="{{ inv.id }}"
                                                                data-inventory-code="{{ inv.code }}"
@@ -115,16 +143,16 @@
                     <h5 class="modal-title" id="editSinglePriceModalLabel">编辑房间价格</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <form method="post" action="{{ path('admin_price_update_contract_price') }}">
+                <form method="post" action="">
                     <div class="modal-body">
                         <input type="hidden" name="inventory_id" id="inventory_id">
                         <input type="hidden" name="redirect_url" value="{{ app.request.uri }}">
-                        
+
                         <div class="mb-3">
                             <label for="room_number" class="form-label">库存编码</label>
                             <input type="text" class="form-control" id="room_number" readonly>
                         </div>
-                        
+
                         <div class="mb-3">
                             <label for="cost_price" class="form-label">采购成本价</label>
                             <input type="number" class="form-control" id="cost_price" name="cost_price" step="0.01" min="0" required>
@@ -132,7 +160,10 @@
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
-                        <button type="submit" class="btn btn-primary">保存</button>
+                        <button type="submit" class="btn btn-primary" id="saveSinglePrice">
+                            <span class="spinner-border spinner-border-sm d-none" role="status"></span>
+                            保存
+                        </button>
                     </div>
                 </form>
             </div>
@@ -173,8 +204,25 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
-                    <button type="button" class="btn btn-primary" id="saveBatchEdit">保存</button>
+                    <button type="button" class="btn btn-primary" id="saveBatchEdit">
+                        <span class="spinner-border spinner-border-sm d-none" role="status"></span>
+                        保存
+                    </button>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast 通知区域 -->
+    <div class="toast-container position-fixed top-0 end-0 p-3">
+        <div id="priceUpdateToast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="toast-header">
+                <i class="fas fa-info-circle text-primary me-2"></i>
+                <strong class="me-auto">价格更新</strong>
+                <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+            <div class="toast-body" id="toastBody">
+                <!-- Toast message will be inserted here -->
             </div>
         </div>
     </div>
@@ -191,6 +239,20 @@
 .price-cell {
     position: relative;
 }
+.price-summary {
+    font-weight: bold;
+    border-bottom: 1px dashed #ddd;
+    padding-bottom: 5px;
+}
+.price-details {
+    margin-top: 5px;
+    padding-top: 5px;
+}
+.price-details-header {
+    margin-bottom: 3px;
+    padding-bottom: 2px;
+    border-bottom: 1px solid #f1f1f1;
+}
 .price-cell:hover .edit-price-btn,
 .room-price:hover .edit-single-price-btn {
     display: inline-block;
@@ -203,17 +265,47 @@
     top: 0;
     color: #007bff;
     cursor: pointer;
+    font-size: 0.8rem;
 }
-.price-cell:hover .price-details {
-    display: block !important;
-    margin-top: 5px;
-    border-top: 1px dashed #ddd;
-    padding-top: 5px;
+.room-price {
+    position: relative;
+    padding: 2px 0;
+}
+.room-price .edit-single-price-btn {
+    top: 50%;
+    transform: translateY(-50%);
 }
 </style>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // Toast 通知函数
+    function showToast(message, type = 'success') {
+        const toast = document.getElementById('priceUpdateToast');
+        const toastBody = document.getElementById('toastBody');
+        const toastHeader = toast.querySelector('.toast-header i');
+        
+        // 设置图标和样式
+        toastHeader.className = type === 'success' ? 'fas fa-check-circle text-success me-2' : 'fas fa-exclamation-circle text-danger me-2';
+        
+        toastBody.textContent = message;
+        
+        const bsToast = new bootstrap.Toast(toast);
+        bsToast.show();
+    }
+    
+    // 设置按钮loading状态
+    function setButtonLoading(button, loading) {
+        const spinner = button.querySelector('.spinner-border');
+        if (loading) {
+            spinner.classList.remove('d-none');
+            button.disabled = true;
+        } else {
+            spinner.classList.add('d-none');
+            button.disabled = false;
+        }
+    }
+    
     // 初始化单个价格编辑弹窗
     document.querySelectorAll('.edit-single-price-btn').forEach(function(btn) {
         btn.addEventListener('click', function() {
@@ -227,28 +319,93 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
     
+    // 单个价格编辑表单提交
+    const singlePriceForm = document.querySelector('#editSinglePriceModal form');
+    if (singlePriceForm) {
+        singlePriceForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const inventoryId = document.getElementById('inventory_id').value;
+            const costPrice = document.getElementById('cost_price').value;
+            const saveBtn = document.getElementById('saveSinglePrice');
+            
+            if (!inventoryId || !costPrice) {
+                showToast('请填写完整信息', 'error');
+                return;
+            }
+            
+            if (parseFloat(costPrice) < 0) {
+                showToast('价格不能为负数', 'error');
+                return;
+            }
+            
+            setButtonLoading(saveBtn, true);
+            
+            // 发送AJAX请求
+            const formData = new FormData();
+            formData.append('inventory_id', inventoryId);
+            formData.append('cost_price', costPrice);
+            
+            const ajaxUrl = '{{ ea_url().setController('Tourze\\\\HotelContractBundle\\\\Controller\\\\Admin\\\\InventorySummaryCrudController').setAction('ajaxUpdateContractPrice').generateUrl() }}';
+            
+            fetch(ajaxUrl, {
+                method: 'POST',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                setButtonLoading(saveBtn, false);
+                
+                if (data.success) {
+                    showToast(data.message, 'success');
+                    
+                    // 关闭模态框
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('editSinglePriceModal'));
+                    modal.hide();
+                    
+                    // 延迟刷新页面
+                    setTimeout(() => {
+                        location.reload();
+                    }, 1000);
+                } else {
+                    showToast('更新失败: ' + data.message, 'error');
+                }
+            })
+            .catch(error => {
+                setButtonLoading(saveBtn, false);
+                console.error('Error:', error);
+                showToast('更新失败，请重试', 'error');
+            });
+        });
+    }
+    
     // 批量调价方式切换
     const batchAdjustMethod = document.getElementById('batch_adjust_method');
     const fixedPriceContainer = document.getElementById('fixed_price_container');
     const adjustValueContainer = document.getElementById('adjust_value_container');
     const adjustHint = document.getElementById('adjust_hint');
     
-    batchAdjustMethod.addEventListener('change', function() {
-        const method = this.value;
-        if (method === 'fixed') {
-            fixedPriceContainer.classList.remove('d-none');
-            adjustValueContainer.classList.add('d-none');
-        } else {
-            fixedPriceContainer.classList.add('d-none');
-            adjustValueContainer.classList.remove('d-none');
-            
-            if (method === 'percent') {
-                adjustHint.textContent = '请输入百分比数值（如：10 表示增加 10%）';
+    if (batchAdjustMethod) {
+        batchAdjustMethod.addEventListener('change', function() {
+            const method = this.value;
+            if (method === 'fixed') {
+                fixedPriceContainer.classList.remove('d-none');
+                adjustValueContainer.classList.add('d-none');
             } else {
-                adjustHint.textContent = '请输入调整金额';
+                fixedPriceContainer.classList.add('d-none');
+                adjustValueContainer.classList.remove('d-none');
+                
+                if (method === 'percent') {
+                    adjustHint.textContent = '请输入百分比数值（如：10 表示增加 10%）';
+                } else {
+                    adjustHint.textContent = '请输入调整金额';
+                }
             }
-        }
-    });
+        });
+    }
     
     // 初始化批量价格编辑弹窗
     let currentDate = '';
@@ -270,29 +427,80 @@ document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('batch_adjust_value').value = '';
             
             // 重置调整方式
-            batchAdjustMethod.value = 'fixed';
-            batchAdjustMethod.dispatchEvent(new Event('change'));
+            if (batchAdjustMethod) {
+                batchAdjustMethod.value = 'fixed';
+                batchAdjustMethod.dispatchEvent(new Event('change'));
+            }
         });
     });
     
-    // 实现批量保存逻辑（此处仅为前端示例，实际需后端支持）
-    document.getElementById('saveBatchEdit').addEventListener('click', function() {
-        const method = batchAdjustMethod.value;
-        let priceValue = 0;
-        
-        if (method === 'fixed') {
-            priceValue = parseFloat(document.getElementById('batch_price_value').value);
-        } else {
-            priceValue = parseFloat(document.getElementById('batch_adjust_value').value);
-        }
-        
-        alert('此功能需要后端支持，当前仅为前端示例');
-        // TODO: 实现批量价格调整的AJAX请求
-        
-        // 关闭弹窗
-        const modal = bootstrap.Modal.getInstance(document.getElementById('editPriceModal'));
-        modal.hide();
-    });
+    // 批量价格保存
+    const saveBatchEditBtn = document.getElementById('saveBatchEdit');
+    if (saveBatchEditBtn) {
+        saveBatchEditBtn.addEventListener('click', function() {
+            const method = batchAdjustMethod.value;
+            let priceValue = 0;
+            
+            if (method === 'fixed') {
+                priceValue = parseFloat(document.getElementById('batch_price_value').value);
+            } else {
+                priceValue = parseFloat(document.getElementById('batch_adjust_value').value);
+            }
+            
+            if (!priceValue || (method === 'fixed' && priceValue <= 0)) {
+                showToast('请输入有效的价格值', 'error');
+                return;
+            }
+            
+            setButtonLoading(saveBatchEditBtn, true);
+            
+            // 构建批量调整参数
+            const batchData = {
+                room_type_id: currentRoomType,
+                date: currentDate,
+                price_type: 'cost_price',
+                adjust_method: method,
+                price_value: method === 'fixed' ? priceValue : null,
+                adjust_value: method !== 'fixed' ? priceValue : null
+            };
+            
+            // 发送AJAX请求
+            const ajaxUrl = '{{ ea_url().setController('Tourze\\\\HotelContractBundle\\\\Controller\\\\Admin\\\\InventorySummaryCrudController').setAction('ajaxBatchPrice').generateUrl() }}';
+            
+            fetch(ajaxUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: JSON.stringify(batchData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                setButtonLoading(saveBatchEditBtn, false);
+                
+                if (data.success) {
+                    showToast(data.message, 'success');
+                    
+                    // 关闭弹窗
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('editPriceModal'));
+                    modal.hide();
+                    
+                    // 延迟刷新页面
+                    setTimeout(() => {
+                        location.reload();
+                    }, 1000);
+                } else {
+                    showToast('调价失败: ' + data.message, 'error');
+                }
+            })
+            .catch(error => {
+                setButtonLoading(saveBatchEditBtn, false);
+                console.error('Error:', error);
+                showToast('调价失败，请重试', 'error');
+            });
+        });
+    }
 });
 </script>
 {% endblock %}
