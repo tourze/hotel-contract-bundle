@@ -34,7 +34,7 @@
     "tourze/doctrine-timestamp-bundle": "0.0.*",
     "tourze/doctrine-user-bundle": "0.0.*",
     "tourze/easy-admin-menu-bundle": "0.1.*",
-    "tourze/enum-extra": "~0.0.5",
+    "tourze/enum-extra": "0.1.*",
     "tourze/env-manage-bundle": "0.1.*",
     "tourze/hotel-profile-bundle": "0.0.*",
     "tourze/symfony-routing-auto-loader-bundle": "0.0.*"
