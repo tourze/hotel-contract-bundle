@@ -3,9 +3,12 @@
 namespace Tourze\HotelContractBundle\Tests\Integration;
 
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
+use Symfony\Component\HttpKernel\KernelInterface;
+use Tourze\HotelContractBundle\HotelContractBundle;
 use Tourze\HotelContractBundle\Repository\DailyInventoryRepository;
 use Tourze\HotelContractBundle\Repository\HotelContractRepository;
 use Tourze\HotelContractBundle\Repository\InventorySummaryRepository;
+use Tourze\IntegrationTestKernel\IntegrationTestKernel;
 
 class HotelContractIntegrationTest extends KernelTestCase
 {
@@ -14,17 +17,19 @@ class HotelContractIntegrationTest extends KernelTestCase
         self::bootKernel();
     }
 
-    protected static function getKernelClass(): string
+    protected static function createKernel(array $options = []): KernelInterface
     {
-        return IntegrationTestKernel::class;
+        return new IntegrationTestKernel('test', true, [
+            HotelContractBundle::class => ['all' => true],
+        ]);
     }
 
     public function test_hotelContractRepository_isRegisteredAsService(): void
     {
         $container = static::getContainer();
-        
+
         $this->assertTrue($container->has(HotelContractRepository::class));
-        
+
         $repository = $container->get(HotelContractRepository::class);
         $this->assertInstanceOf(HotelContractRepository::class, $repository);
     }
@@ -32,9 +37,9 @@ class HotelContractIntegrationTest extends KernelTestCase
     public function test_dailyInventoryRepository_isRegisteredAsService(): void
     {
         $container = static::getContainer();
-        
+
         $this->assertTrue($container->has(DailyInventoryRepository::class));
-        
+
         $repository = $container->get(DailyInventoryRepository::class);
         $this->assertInstanceOf(DailyInventoryRepository::class, $repository);
     }
@@ -42,9 +47,9 @@ class HotelContractIntegrationTest extends KernelTestCase
     public function test_inventorySummaryRepository_isRegisteredAsService(): void
     {
         $container = static::getContainer();
-        
+
         $this->assertTrue($container->has(InventorySummaryRepository::class));
-        
+
         $repository = $container->get(InventorySummaryRepository::class);
         $this->assertInstanceOf(InventorySummaryRepository::class, $repository);
     }
@@ -53,8 +58,8 @@ class HotelContractIntegrationTest extends KernelTestCase
     {
         $kernel = self::$kernel;
         $bundles = $kernel->getBundles();
-        
+
         $this->assertArrayHasKey('HotelContractBundle', $bundles);
         $this->assertInstanceOf(\Tourze\HotelContractBundle\HotelContractBundle::class, $bundles['HotelContractBundle']);
     }
-} 
+}

@@ -37,6 +37,7 @@
     "tourze/enum-extra": "0.1.*",
     "tourze/env-manage-bundle": "0.1.*",
     "tourze/hotel-profile-bundle": "0.0.*",
+    "tourze/symfony-integration-test-kernel": "0.0.*",
     "tourze/symfony-routing-auto-loader-bundle": "0.0.*"
   },
   "require-dev": {
