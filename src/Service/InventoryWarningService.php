@@ -125,7 +125,7 @@ class InventoryWarningService
                 $this->cache->save($cacheItem);
 
                 $sentCount++;
-            } catch  (\Throwable $e) {
+            } catch (\Throwable $e) {
                 $this->logger->error('发送库存预警邮件失败: ' . $e->getMessage(), [
                     'summary_id' => $summary->getId(),
                     'hotel' => $summary->getHotel()->getName(),

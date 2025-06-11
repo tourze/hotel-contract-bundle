@@ -42,7 +42,7 @@ class InventoryWarningCommand extends Command
             try {
                 $date = new \DateTime($dateStr);
                 $io->note(sprintf('检查特定日期: %s', $date->format('Y-m-d')));
-            } catch  (\Throwable $e) {
+            } catch (\Throwable $e) {
                 $io->error(sprintf('日期格式错误: %s', $dateStr));
                 return Command::FAILURE;
             }
