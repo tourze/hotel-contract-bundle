@@ -65,8 +65,8 @@ class DailyInventoryFixtures extends Fixture implements DependentFixtureInterfac
                 }
 
                 // 获取合同的起始日期
-                $startDate = clone $contract->getStartDate();
-                $endDate = clone $contract->getEndDate();
+                $startDate = new \DateTime($contract->getStartDate()->format('Y-m-d'));
+                $endDate = new \DateTime($contract->getEndDate()->format('Y-m-d'));
 
                 // 只生成7天的库存用于测试
                 $endDate = clone $startDate;

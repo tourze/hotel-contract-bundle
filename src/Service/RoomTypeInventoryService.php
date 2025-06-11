@@ -21,8 +21,7 @@ class RoomTypeInventoryService
         private readonly DailyInventoryRepository $inventoryRepository,
         private readonly InventorySummaryService $summaryService,
         private readonly RoomTypeRepository $roomTypeRepository,
-    ) {
-    }
+    ) {}
 
     /**
      * 为指定日期创建房型库存
@@ -36,16 +35,16 @@ class RoomTypeInventoryService
      * @return array 创建的库存记录数组
      */
     public function createInventories(
-        RoomType $roomType, 
-        \DateTimeInterface $date, 
-        HotelContract $contract, 
+        RoomType $roomType,
+        \DateTimeInterface $date,
+        HotelContract $contract,
         int $count,
         float $costPrice = 0.0,
         float $sellingPrice = 0.0
     ): array {
         $inventories = [];
         $dateFormatted = $date->format('Y-m-d');
-        
+
         for ($i = 1; $i <= $count; $i++) {
             // 生成唯一的code
             $code = sprintf(
@@ -55,11 +54,11 @@ class RoomTypeInventoryService
                 $dateFormatted,
                 $i
             );
-            
+
             // 检查是否已存在
             $existingInventory = $this->entityManager->getRepository(DailyInventory::class)
                 ->findOneBy(['code' => $code]);
-                
+
             if (!$existingInventory) {
                 $inventory = new DailyInventory();
                 $inventory->setRoomType($roomType)
@@ -70,17 +69,17 @@ class RoomTypeInventoryService
                     ->setStatus(DailyInventoryStatusEnum::AVAILABLE)
                     ->setCostPrice((string)$costPrice)
                     ->setSellingPrice((string)$sellingPrice);
-                    
+
                 $this->entityManager->persist($inventory);
                 $inventories[] = $inventory;
             }
         }
-        
+
         $this->entityManager->flush();
-        
+
         // 更新库存统计
         $this->summaryService->syncInventorySummary($date);
-        
+
         return $inventories;
     }
 
@@ -97,10 +96,10 @@ class RoomTypeInventoryService
      * @return array 操作结果
      */
     public function batchCreateInventories(
-        RoomType $roomType, 
-        \DateTimeInterface $startDate, 
-        \DateTimeInterface $endDate, 
-        HotelContract $contract, 
+        RoomType $roomType,
+        \DateTimeInterface $startDate,
+        \DateTimeInterface $endDate,
+        HotelContract $contract,
         int $count,
         float $costPrice = 0.0,
         float $sellingPrice = 0.0
@@ -110,23 +109,23 @@ class RoomTypeInventoryService
             'created' => 0,
             'errors' => []
         ];
-        
+
         $currentDate = clone $startDate;
         $endDateCopy = clone $endDate;
-        
+
         while ($currentDate <= $endDateCopy) {
             $result['total_days']++;
-            
+
             try {
                 $dailyCount = $this->createInventories(
-                    $roomType, 
-                    $currentDate, 
-                    $contract, 
+                    $roomType,
+                    $currentDate,
+                    $contract,
                     $count,
                     $costPrice,
                     $sellingPrice
                 );
-                
+
                 $result['created'] += count($dailyCount);
             } catch (\Exception $e) {
                 $result['errors'][] = [
@@ -134,7 +133,7 @@ class RoomTypeInventoryService
                     'message' => $e->getMessage()
                 ];
             }
-            
+
             // 移动到下一天
             if ($currentDate instanceof \DateTime) {
                 $currentDate->modify('+1 day');
@@ -145,7 +144,7 @@ class RoomTypeInventoryService
                 $currentDate = $nextDate;
             }
         }
-        
+
         return $result;
     }
 
@@ -158,8 +157,8 @@ class RoomTypeInventoryService
      * @return array|DailyInventory[] 可用库存记录数组
      */
     public function findAvailableInventories(
-        RoomType $roomType, 
-        \DateTimeInterface $date, 
+        RoomType $roomType,
+        \DateTimeInterface $date,
         int $count = 1
     ): array {
         return $this->inventoryRepository->createQueryBuilder('di')
@@ -182,25 +181,25 @@ class RoomTypeInventoryService
      * @return bool 是否有足够库存
      */
     public function hasAvailableInventory(
-        RoomType $roomType, 
-        \DateTimeInterface $startDate, 
-        \DateTimeInterface $endDate, 
+        RoomType $roomType,
+        \DateTimeInterface $startDate,
+        \DateTimeInterface $endDate,
         int $requiredCount
     ): bool {
         $currentDate = clone $startDate;
         $endDateCopy = clone $endDate;
-        
+
         while ($currentDate <= $endDateCopy) {
             $availableCount = $this->inventoryRepository->count([
                 'roomType' => $roomType,
                 'date' => $currentDate,
                 'isAvailable' => true
             ]);
-            
+
             if ($availableCount < $requiredCount) {
                 return false;
             }
-            
+
             // 移动到下一天
             if ($currentDate instanceof \DateTime) {
                 $currentDate->modify('+1 day');
@@ -211,7 +210,7 @@ class RoomTypeInventoryService
                 $currentDate = $nextDate;
             }
         }
-        
+
         return true;
     }
 
@@ -225,24 +224,24 @@ class RoomTypeInventoryService
      * @return array 预留的库存记录数组
      */
     public function reserveInventories(
-        RoomType $roomType, 
-        \DateTimeInterface $startDate, 
-        \DateTimeInterface $endDate, 
+        RoomType $roomType,
+        \DateTimeInterface $startDate,
+        \DateTimeInterface $endDate,
         int $count
     ): array {
         $reserved = [];
-        
+
         // 检查是否有足够库存
         if (!$this->hasAvailableInventory($roomType, $startDate, $endDate, $count)) {
             throw new \RuntimeException('指定日期范围内没有足够的可用库存');
         }
-        
+
         $currentDate = clone $startDate;
         $endDateCopy = clone $endDate;
-        
+
         while ($currentDate <= $endDateCopy) {
             $availableInventories = $this->findAvailableInventories($roomType, $currentDate, $count);
-            
+
             foreach ($availableInventories as $inventory) {
                 $inventory->setStatus(DailyInventoryStatusEnum::RESERVED);
                 $reserved[] = $inventory;
@@ -258,9 +257,9 @@ class RoomTypeInventoryService
                 $currentDate = $nextDate;
             }
         }
-        
+
         $this->entityManager->flush();
-        
+
         return $reserved;
     }
 
@@ -330,4 +329,4 @@ class RoomTypeInventoryService
             'details' => $result
         ];
     }
-} 
+}

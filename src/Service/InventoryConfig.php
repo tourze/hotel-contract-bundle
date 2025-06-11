@@ -17,8 +17,7 @@ class InventoryConfig
 
     public function __construct(
         private readonly EnvRepository $envRepository,
-    ) {
-    }
+    ) {}
 
     /**
      * 读取库存预警配置
@@ -28,12 +27,12 @@ class InventoryConfig
     public function getWarningConfig(): array
     {
         $config = $this->getDefaultConfig();
-        
+
         foreach (self::CONFIG_KEYS as $key => $envName) {
             $env = $this->envRepository->findOneBy(['name' => $envName, 'valid' => true]);
             if ($env) {
                 $value = $env->getValue();
-                
+
                 // 根据配置项类型转换值
                 $config[$key] = match ($key) {
                     'warning_threshold', 'warning_interval' => (int) $value,

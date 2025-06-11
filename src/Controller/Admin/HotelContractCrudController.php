@@ -45,8 +45,7 @@ class HotelContractCrudController extends AbstractCrudController
         private readonly ContractService $contractService,
         private readonly AdminUrlGenerator $adminUrlGenerator,
         private readonly DailyInventoryRepository $dailyInventoryRepository,
-    ) {
-    }
+    ) {}
 
     public static function getEntityFqcn(): string
     {
@@ -79,7 +78,12 @@ class HotelContractCrudController extends AbstractCrudController
             ->add(Crud::PAGE_DETAIL, $approveAction)
             ->add(Crud::PAGE_DETAIL, $inventoryStatsAction)
             ->reorder(Crud::PAGE_DETAIL, [
-                'approve', 'terminate', 'inventoryStats', Action::EDIT, Action::DELETE, Action::INDEX
+                'approve',
+                'terminate',
+                'inventoryStats',
+                Action::EDIT,
+                Action::DELETE,
+                Action::INDEX
             ]);
     }
 
@@ -90,8 +94,8 @@ class HotelContractCrudController extends AbstractCrudController
             ->setEntityLabelInPlural('酒店合同')
             ->setPageTitle(Crud::PAGE_INDEX, '合同列表')
             ->setPageTitle(Crud::PAGE_NEW, '创建新合同')
-            ->setPageTitle(Crud::PAGE_EDIT, fn (HotelContract $contract) => sprintf('编辑合同 <strong>%s</strong>', $contract->getContractNo()))
-            ->setPageTitle(Crud::PAGE_DETAIL, fn (HotelContract $contract) => sprintf('合同详情 <strong>%s</strong>', $contract->getContractNo()))
+            ->setPageTitle(Crud::PAGE_EDIT, fn(HotelContract $contract) => sprintf('编辑合同 <strong>%s</strong>', $contract->getContractNo()))
+            ->setPageTitle(Crud::PAGE_DETAIL, fn(HotelContract $contract) => sprintf('合同详情 <strong>%s</strong>', $contract->getContractNo()))
             ->setDefaultSort(['priority' => 'ASC', 'createTime' => 'DESC'])
             ->setFormOptions(['validation_groups' => ['Default']]);
     }
@@ -102,12 +106,12 @@ class HotelContractCrudController extends AbstractCrudController
         foreach (ContractTypeEnum::cases() as $case) {
             $contractTypeChoices[$case->getLabel()] = $case->value;
         }
-        
+
         $contractStatusChoices = [];
         foreach (ContractStatusEnum::cases() as $case) {
             $contractStatusChoices[$case->getLabel()] = $case->value;
         }
-        
+
         return $filters
             ->add(TextFilter::new('contractNo', '合同编号'))
             ->add(EntityFilter::new('hotel', '酒店'))
@@ -126,7 +130,7 @@ class HotelContractCrudController extends AbstractCrudController
             ->setFormTypeOption('disabled', 'disabled')
             ->setHelp('合同编号将自动生成，格式为：HT + 年月日 + 3位序号')
             ->hideOnForm();
-        
+
         yield AssociationField::new('hotel', '酒店')
             ->setRequired(true)
             ->setFormTypeOption('placeholder', '请选择酒店');
@@ -155,22 +159,22 @@ class HotelContractCrudController extends AbstractCrudController
                 ContractStatusEnum::TERMINATED->value => 'danger',
             ])
             ->hideOnForm();
-        
+
         yield FormField::addPanel('合同期限与房间配置');
         yield DateField::new('startDate', '开始日期')
             ->setRequired(true);
-        
+
         yield DateField::new('endDate', '结束日期')
             ->setRequired(true);
-        
+
         yield IntegerField::new('totalRooms', '总房间数')
             ->setRequired(true)
             ->setHelp('此合同包含的房间总数');
-        
+
         yield IntegerField::new('totalDays', '总天数')
             ->setRequired(true)
             ->setHelp('此合同覆盖的总天数');
-        
+
         yield MoneyField::new('totalAmount', '合同总成本')
             ->setCurrency('CNY')
             ->setStoredAsCents(false)
@@ -215,22 +219,22 @@ class HotelContractCrudController extends AbstractCrudController
                     }
                     return [
                         'rate' => 0,
-                        'color' => 'secondary', 
+                        'color' => 'secondary',
                         'formatted' => '0.00%'
                     ];
                 });
         }
-        
+
         yield FormField::addPanel('其他信息');
         yield IntegerField::new('priority', '合同优先级')
             ->setHelp('数字越小优先级越高，相同酒店的合同会按优先级排序使用')
             ->setRequired(true);
-        
+
         if ($pageName === Crud::PAGE_EDIT || $pageName === Crud::PAGE_DETAIL) {
             yield TextareaField::new('terminationReason', '终止原因')
                 ->hideOnIndex()
                 ->setFormTypeOption('disabled', 'disabled')
-                ->setCustomOption('renderCondition', function(HotelContract $entity) {
+                ->setCustomOption('renderCondition', function (HotelContract $entity) {
                     return $entity->getStatus() === ContractStatusEnum::TERMINATED;
                 });
         }
@@ -240,7 +244,7 @@ class HotelContractCrudController extends AbstractCrudController
             ->hideOnForm()
             ->setFormTypeOption('disabled', 'disabled')
             ->setFormat('Y-m-d H:i:s');
-        
+
         yield DateTimeField::new('updateTime', '更新时间')
             ->hideOnForm()
             ->hideOnIndex()
@@ -263,7 +267,7 @@ class HotelContractCrudController extends AbstractCrudController
 
         return $queryBuilder;
     }
-    
+
     public function createEntity(string $entityFqcn)
     {
         $contract = new HotelContract();
@@ -271,7 +275,7 @@ class HotelContractCrudController extends AbstractCrudController
         // 初始化合同编号为空，保存时生成
         return $contract;
     }
-    
+
     public function persistEntity(EntityManagerInterface $entityManager, $entityInstance): void
     {
         // 生成合同编号
@@ -279,9 +283,9 @@ class HotelContractCrudController extends AbstractCrudController
             $contractNo = $this->contractService->generateContractNumber();
             $entityInstance->setContractNo($contractNo);
         }
-        
+
         parent::persistEntity($entityManager, $entityInstance);
-        
+
         // 创建合同后发送通知
         $this->contractService->sendContractCreatedNotification($entityInstance);
     }
@@ -289,18 +293,18 @@ class HotelContractCrudController extends AbstractCrudController
     public function updateEntity(EntityManagerInterface $entityManager, $entityInstance): void
     {
         parent::updateEntity($entityManager, $entityInstance);
-        
+
         // 更新合同后发送通知
         $this->contractService->sendContractUpdatedNotification($entityInstance);
     }
-    
+
     public function approveContract(AdminContext $context)
     {
         $contract = $context->getEntity()->getInstance();
         $this->contractService->approveContract($contract);
-        
+
         $this->addFlash('success', sprintf('合同 %s 已审批生效', $contract->getContractNo()));
-        
+
         return $this->redirect(
             $this->adminUrlGenerator
                 ->setAction(Action::DETAIL)
@@ -351,11 +355,11 @@ class HotelContractCrudController extends AbstractCrudController
     {
         $contract = $context->getEntity()->getInstance();
         assert($contract instanceof HotelContract);
-        
+
         // 获取合同库存统计
         $startDate = new \DateTime();
         $endDate = (new \DateTime())->modify('+30 days'); // 统计未来30天的库存
-        
+
         // 按房型统计库存情况
         $inventoryStats = $this->dailyInventoryRepository
             ->createQueryBuilder('di')

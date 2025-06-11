@@ -22,8 +22,7 @@ class PriceManagementService
         private readonly HotelContractRepository $contractRepository,
         private readonly DailyInventoryRepository $dailyInventoryRepository,
         private readonly LoggerInterface $logger,
-    ) {
-    }
+    ) {}
 
     /**
      * 获取合同价格日历数据
@@ -58,7 +57,7 @@ class PriceManagementService
                 $startDate,
                 $endDate
             );
-            
+
             // 组织日历数据
             $calendarData = $this->organizeCalendarData($startDate, $endDate, $roomTypes, $priceData);
         }
@@ -84,15 +83,15 @@ class PriceManagementService
             if (!$inventory) {
                 return ['success' => false, 'message' => '库存记录不存在'];
             }
-            
+
             $inventory->setCostPrice($costPrice);
             $this->entityManager->flush();
-            
+
             $this->logger->info('合同价格更新成功', [
                 'inventory_id' => $inventoryId,
                 'cost_price' => $costPrice
             ]);
-            
+
             return ['success' => true, 'message' => '价格更新成功'];
         } catch (\Exception $e) {
             $this->logger->error('合同价格更新失败', [
@@ -100,7 +99,7 @@ class PriceManagementService
                 'cost_price' => $costPrice,
                 'exception' => $e
             ]);
-            
+
             return ['success' => false, 'message' => '价格更新失败'];
         }
     }
@@ -112,49 +111,49 @@ class PriceManagementService
     {
         $hotel = null;
         $roomType = null;
-        
+
         if ($hotelId) {
             $hotel = $this->hotelRepository->find($hotelId);
         }
-        
+
         if ($roomTypeId) {
             $roomType = $this->roomTypeRepository->find($roomTypeId);
         }
-        
+
         // 获取所有酒店和房型供选择
         $hotels = $this->hotelRepository->findAll();
         $roomTypes = [];
-        
+
         if ($hotel) {
             $roomTypes = $this->roomTypeRepository->findBy(['hotel' => $hotel]);
         }
-        
+
         // 解析年月
         list($year, $monthNum) = explode('-', $month);
         $startDate = new \DateTime("$year-$monthNum-01");
         $endDate = clone $startDate;
         $endDate->modify('last day of this month');
-        
+
         $calendarData = [];
-        
+
         if ($hotel) {
             // 查询条件
             $criteria = ['room.hotel' => $hotel];
-            
+
             if ($roomType) {
                 $criteria['room.roomType'] = $roomType;
             }
-            
+
             // 获取日期范围内的价格数据
             $priceData = $this->dailyInventoryRepository->findByDateRangeAndCriteria(
                 $startDate,
                 $endDate,
                 $criteria
             );
-            
+
             // 如果选择了特定房型，只显示该房型
             $displayRoomTypes = $roomType ? [$roomType] : $roomTypes;
-            
+
             // 组织日历数据
             $calendarData = $this->organizeSellingPriceData($startDate, $endDate, $displayRoomTypes, $priceData);
         }
@@ -181,15 +180,15 @@ class PriceManagementService
             if (!$inventory) {
                 return ['success' => false, 'message' => '库存记录不存在'];
             }
-            
+
             $inventory->setSellingPrice($sellingPrice);
             $this->entityManager->flush();
-            
+
             $this->logger->info('销售价格更新成功', [
                 'inventory_id' => $inventoryId,
                 'selling_price' => $sellingPrice
             ]);
-            
+
             return ['success' => true, 'message' => '销售价格更新成功'];
         } catch (\Exception $e) {
             $this->logger->error('销售价格更新失败', [
@@ -226,7 +225,7 @@ class PriceManagementService
             if (isset($params['date']) && isset($params['room_type_id'])) {
                 return $this->processSingleDatePriceAdjustment($params);
             }
-            
+
             // 处理完整的批量调价参数
             $hotel = $this->hotelRepository->find($params['hotel_id']);
             $roomType = $params['room_type_id'] ? $this->roomTypeRepository->find($params['room_type_id']) : null;
@@ -247,7 +246,7 @@ class PriceManagementService
                 'days' => $params['days'] ?? [],
                 'reason' => $params['reason'],
             ];
-            
+
             // 根据调整方式设置价格值
             if ($params['adjust_method'] === 'fixed') {
                 $adjustmentParams['cost_price'] = $params['price_value'];
@@ -255,22 +254,22 @@ class PriceManagementService
             } else {
                 $adjustmentParams['adjust_value'] = $params['adjust_value'];
             }
-            
+
             // 调用批量调价服务
             $result = $this->updateService->batchUpdateInventoryPrice($adjustmentParams);
-            
+
             $this->logger->info('批量调价执行', [
                 'params' => $adjustmentParams,
                 'result' => $result
             ]);
-            
+
             return $result ?: ['success' => false, 'message' => '调价失败'];
         } catch (\Exception $e) {
             $this->logger->error('批量调价失败', [
                 'params' => $params,
                 'exception' => $e
             ]);
-            
+
             return ['success' => false, 'message' => '调价失败：' . $e->getMessage()];
         }
     }
@@ -285,27 +284,27 @@ class PriceManagementService
             $date = new \DateTime($params['date']);
             $priceType = $params['price_type'] ?? 'cost_price';
             $adjustMethod = $params['adjust_method'];
-            
+
             if (!$roomType) {
                 return ['success' => false, 'message' => '房型不存在'];
             }
-            
+
             // 查找该日期该房型的所有库存
             $inventories = $this->dailyInventoryRepository->findBy([
                 'roomType' => $roomType,
                 'date' => $date,
             ]);
-            
+
             if (empty($inventories)) {
                 return ['success' => false, 'message' => '未找到相关库存数据'];
             }
-            
+
             $updateCount = 0;
-            
+
             foreach ($inventories as $inventory) {
                 $currentPrice = $priceType === 'cost_price' ? $inventory->getCostPrice() : $inventory->getSellingPrice();
                 $newPrice = 0;
-                
+
                 // 根据调整方式计算新价格
                 switch ($adjustMethod) {
                     case 'fixed':
@@ -327,22 +326,22 @@ class PriceManagementService
                         }
                         break;
                 }
-                
+
                 // 确保价格不为负数
                 $newPrice = max(0, $newPrice);
-                
+
                 // 更新价格
                 if ($priceType === 'cost_price') {
                     $inventory->setCostPrice($newPrice);
                 } else {
                     $inventory->setSellingPrice($newPrice);
                 }
-                
+
                 $updateCount++;
             }
-            
+
             $this->entityManager->flush();
-            
+
             $this->logger->info('单日期价格调整成功', [
                 'room_type_id' => $params['room_type_id'],
                 'date' => $params['date'],
@@ -350,18 +349,17 @@ class PriceManagementService
                 'adjust_method' => $adjustMethod,
                 'update_count' => $updateCount
             ]);
-            
+
             return [
-                'success' => true, 
+                'success' => true,
                 'message' => "成功调整 {$updateCount} 个库存的价格"
             ];
-            
         } catch (\Exception $e) {
             $this->logger->error('单日期价格调整失败', [
                 'params' => $params,
                 'exception' => $e
             ]);
-            
+
             return ['success' => false, 'message' => '调价失败：' . $e->getMessage()];
         }
     }
@@ -373,7 +371,7 @@ class PriceManagementService
     {
         $calendarData = [];
         $currentDate = clone $startDate;
-        
+
         // 生成日历头部日期
         $dates = [];
         while ($currentDate <= $endDate) {
@@ -385,17 +383,17 @@ class PriceManagementService
             ];
             $currentDate->modify('+1 day');
         }
-        
+
         $calendarData['dates'] = $dates;
         $calendarData['roomTypes'] = [];
-        
+
         // 按房型组织价格数据
         foreach ($roomTypes as $roomType) {
             $roomTypeData = [
                 'roomType' => $roomType,
                 'prices' => [],
             ];
-            
+
             // 为每一天填充价格
             foreach ($dates as $dateInfo) {
                 $date = $dateInfo['date']->format('Y-m-d');
@@ -403,11 +401,11 @@ class PriceManagementService
                     'date' => $date,
                     'inventories' => [],
                 ];
-                
+
                 // 查找该日期该房型的价格数据
                 foreach ($priceData as $item) {
                     if (
-                        $item['roomTypeId'] == $roomType->getId() && 
+                        $item['roomTypeId'] == $roomType->getId() &&
                         $item['date']->format('Y-m-d') === $date
                     ) {
                         $priceInfo['inventories'][] = [
@@ -418,13 +416,13 @@ class PriceManagementService
                         ];
                     }
                 }
-                
+
                 $roomTypeData['prices'][] = $priceInfo;
             }
-            
+
             $calendarData['roomTypes'][] = $roomTypeData;
         }
-        
+
         return $calendarData;
     }
 
@@ -435,7 +433,7 @@ class PriceManagementService
     {
         $calendarData = [];
         $currentDate = clone $startDate;
-        
+
         // 生成日历头部日期
         $dates = [];
         while ($currentDate <= $endDate) {
@@ -447,17 +445,17 @@ class PriceManagementService
             ];
             $currentDate->modify('+1 day');
         }
-        
+
         $calendarData['dates'] = $dates;
         $calendarData['roomTypes'] = [];
-        
+
         // 按房型组织价格数据
         foreach ($roomTypes as $roomType) {
             $roomTypeData = [
                 'roomType' => $roomType,
                 'prices' => [],
             ];
-            
+
             // 为每一天填充价格
             foreach ($dates as $dateInfo) {
                 $date = $dateInfo['date']->format('Y-m-d');
@@ -465,11 +463,11 @@ class PriceManagementService
                     'date' => $date,
                     'inventories' => [],
                 ];
-                
+
                 // 查找该日期该房型的库存数据
                 foreach ($inventories as $inventory) {
                     if (
-                        $inventory->getRoomType()->getId() == $roomType->getId() && 
+                        $inventory->getRoomType()->getId() == $roomType->getId() &&
                         $inventory->getDate()->format('Y-m-d') === $date
                     ) {
                         $priceInfo['inventories'][] = [
@@ -480,13 +478,13 @@ class PriceManagementService
                         ];
                     }
                 }
-                
+
                 $roomTypeData['prices'][] = $priceInfo;
             }
-            
+
             $calendarData['roomTypes'][] = $roomTypeData;
         }
-        
+
         return $calendarData;
     }
 
@@ -504,7 +502,7 @@ class PriceManagementService
             '6' => '周六',
             '7' => '周日',
         ];
-        
+
         return $weekdays[$weekdayNumber] ?? '';
     }
 }

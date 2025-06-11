@@ -8,6 +8,8 @@ use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\EntityRepository;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
+use Psr\Cache\CacheItemInterface;
+use Psr\Cache\CacheItemPoolInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\Mime\Email;
@@ -26,6 +28,7 @@ class InventoryWarningServiceTest extends TestCase
     private MailerInterface|MockObject $mailer;
     private LoggerInterface|MockObject $logger;
     private InventoryConfig|MockObject $inventoryConfig;
+    private CacheItemPoolInterface|MockObject $cache;
     private InventoryWarningService $service;
 
     protected function setUp(): void
@@ -34,12 +37,14 @@ class InventoryWarningServiceTest extends TestCase
         $this->mailer = $this->createMock(MailerInterface::class);
         $this->logger = $this->createMock(LoggerInterface::class);
         $this->inventoryConfig = $this->createMock(InventoryConfig::class);
+        $this->cache = $this->createMock(CacheItemPoolInterface::class);
 
         $this->service = new InventoryWarningService(
             $this->entityManager,
             $this->mailer,
             $this->logger,
-            $this->inventoryConfig
+            $this->inventoryConfig,
+            $this->cache
         );
     }
 
@@ -180,6 +185,20 @@ class InventoryWarningServiceTest extends TestCase
             ->method('getResult')
             ->willReturn([$summary]);
 
+        // 模拟缓存
+        $cacheItem = $this->createMock(CacheItemInterface::class);
+        $cacheItem->method('isHit')->willReturn(false); // 未命中缓存，可以发送
+        $cacheItem->method('set')->willReturnSelf();
+        $cacheItem->method('expiresAfter')->willReturnSelf();
+
+        $this->cache->expects($this->once())
+            ->method('getItem')
+            ->willReturn($cacheItem);
+
+        $this->cache->expects($this->once())
+            ->method('save')
+            ->with($cacheItem);
+
         // 模拟邮件发送
         $this->mailer->expects($this->once())
             ->method('send')
@@ -295,6 +314,20 @@ class InventoryWarningServiceTest extends TestCase
         $query->expects($this->once())
             ->method('getResult')
             ->willReturn([$summary]);
+
+        // 模拟缓存
+        $cacheItem = $this->createMock(CacheItemInterface::class);
+        $cacheItem->method('isHit')->willReturn(false);
+        $cacheItem->method('set')->willReturnSelf();
+        $cacheItem->method('expiresAfter')->willReturnSelf();
+
+        $this->cache->expects($this->once())
+            ->method('getItem')
+            ->willReturn($cacheItem);
+
+        // 邮件发送失败时不应该保存缓存
+        $this->cache->expects($this->never())
+            ->method('save');
 
         // 模拟邮件发送异常
         $this->mailer->expects($this->once())
@@ -419,6 +452,20 @@ class InventoryWarningServiceTest extends TestCase
             ->method('getResult')
             ->willReturn([$summary]);
 
+        // 模拟缓存
+        $cacheItem = $this->createMock(CacheItemInterface::class);
+        $cacheItem->method('isHit')->willReturn(false);
+        $cacheItem->method('set')->willReturnSelf();
+        $cacheItem->method('expiresAfter')->willReturnSelf();
+
+        $this->cache->expects($this->once())
+            ->method('getItem')
+            ->willReturn($cacheItem);
+
+        $this->cache->expects($this->once())
+            ->method('save')
+            ->with($cacheItem);
+
         // 验证邮件发送，期望收件人包含多个地址
         $this->mailer->expects($this->once())
             ->method('send')
@@ -435,5 +482,82 @@ class InventoryWarningServiceTest extends TestCase
         $this->assertTrue($result['success']);
         $this->assertEquals('成功发送1条库存预警通知', $result['message']);
         $this->assertEquals(1, $result['sent_count']);
+    }
+
+    /**
+     * 测试缓存命中时跳过发送
+     */
+    public function testCheckAndSendWarningsCacheHit(): void
+    {
+        // 创建测试数据
+        $hotel = $this->createMock(Hotel::class);
+        $roomType = $this->createMock(RoomType::class);
+        $summary = $this->createMock(InventorySummary::class);
+        $date = new \DateTime('2024-01-15');
+
+        $hotel->method('getId')->willReturn(1);
+        $hotel->method('getName')->willReturn('测试酒店');
+        $roomType->method('getId')->willReturn(1);
+        $roomType->method('getName')->willReturn('标准间');
+
+        $summary->method('getHotel')->willReturn($hotel);
+        $summary->method('getRoomType')->willReturn($roomType);
+        $summary->method('getDate')->willReturn($date);
+        $summary->method('getId')->willReturn(1);
+
+        $this->inventoryConfig->expects($this->once())
+            ->method('getWarningConfig')
+            ->willReturn([
+                'enable_warning' => true,
+                'email_recipients' => 'admin@example.com',
+                'warning_interval' => 1 // 1小时间隔
+            ]);
+
+        // 模拟Repository查询
+        $repository = $this->createMock(EntityRepository::class);
+        $queryBuilder = $this->createMock(\Doctrine\ORM\QueryBuilder::class);
+        $query = $this->createMock(\Doctrine\ORM\Query::class);
+
+        $this->entityManager->expects($this->once())
+            ->method('getRepository')
+            ->willReturn($repository);
+
+        $repository->expects($this->once())
+            ->method('createQueryBuilder')
+            ->willReturn($queryBuilder);
+
+        $queryBuilder->method('select')->willReturnSelf();
+        $queryBuilder->method('leftJoin')->willReturnSelf();
+        $queryBuilder->method('where')->willReturnSelf();
+        $queryBuilder->method('andWhere')->willReturnSelf();
+        $queryBuilder->method('setParameter')->willReturnSelf();
+        $queryBuilder->method('getQuery')->willReturn($query);
+
+        $query->expects($this->once())
+            ->method('getResult')
+            ->willReturn([$summary]);
+
+        // 模拟缓存命中（刚刚发送过）
+        $cacheItem = $this->createMock(CacheItemInterface::class);
+        $cacheItem->method('isHit')->willReturn(true);
+        $cacheItem->method('get')->willReturn(time()); // 刚刚发送的时间戳
+
+        $this->cache->expects($this->once())
+            ->method('getItem')
+            ->willReturn($cacheItem);
+
+        // 不应该保存缓存（因为没有发送）
+        $this->cache->expects($this->never())
+            ->method('save');
+
+        // 不应该发送邮件
+        $this->mailer->expects($this->never())
+            ->method('send');
+
+        $result = $this->service->checkAndSendWarnings();
+
+        $this->assertTrue($result['success']);
+        $this->assertEquals('成功发送0条库存预警通知', $result['message']);
+        $this->assertEquals(0, $result['sent_count']);
     }
 }

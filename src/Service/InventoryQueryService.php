@@ -14,8 +14,7 @@ class InventoryQueryService
 {
     public function __construct(
         private readonly EntityManagerInterface $entityManager,
-    ) {
-    }
+    ) {}
 
     /**
      * 获取库存信息
@@ -46,7 +45,7 @@ class InventoryQueryService
         }
 
         // 检查是否所有日期都有足够库存且有价格
-        $canBookAll = array_reduce($inventoryData, function($carry, $item) {
+        $canBookAll = array_reduce($inventoryData, function ($carry, $item) {
             return $carry && $item['can_book'] && !empty($item['daily_inventories']);
         }, true);
 
@@ -79,15 +78,15 @@ class InventoryQueryService
                 AND date = :date 
                 AND status = :status 
                 ORDER BY profit_rate DESC, cost_price ASC";
-        
+
         $stmt = $conn->executeQuery($sql, [
             'roomTypeId' => $roomType->getId(),
             'date' => $dateStr,
             'status' => 'available'
         ]);
-        
+
         $results = $stmt->fetchAllAssociative();
-        
+
         // 将结果转换为实体对象
         $dailyInventories = [];
         foreach ($results as $row) {
@@ -99,25 +98,25 @@ class InventoryQueryService
 
         // 计算实际可用房间数量
         $actualAvailableRooms = count($dailyInventories);
-        
+
         // 判断是否可以预订：必须有足够的可用库存
         $canBook = $actualAvailableRooms >= $roomCount;
 
         // 如果库存不足，获取所有库存（包括已占用的）用于展示
         $allDailyInventories = [];
         if (!$canBook) {
-            $sql2 = "SELECT * FROM daily_inventory 
-                     WHERE room_type_id = :roomTypeId 
-                     AND date = :date 
+            $sql2 = "SELECT * FROM daily_inventory
+                     WHERE room_type_id = :roomTypeId
+                     AND date = :date
                      ORDER BY profit_rate DESC, cost_price ASC";
-            
+
             $stmt2 = $conn->executeQuery($sql2, [
                 'roomTypeId' => $roomType->getId(),
                 'date' => $dateStr
             ]);
-            
+
             $results2 = $stmt2->fetchAllAssociative();
-            
+
             // 将结果转换为实体对象
             foreach ($results2 as $row) {
                 $dailyInventory = $this->entityManager->find(DailyInventory::class, $row['id']);
@@ -165,7 +164,7 @@ class InventoryQueryService
         $sellingPrice = (float)$dailyInventory->getSellingPrice();
         $costPrice = (float)$dailyInventory->getCostPrice();
         $profit = $sellingPrice - $costPrice;
-        
+
         return [
             'id' => $dailyInventory->getId(),
             'code' => $dailyInventory->getCode(),
@@ -189,7 +188,7 @@ class InventoryQueryService
         }
 
         // 按利润率从高到低排序
-        usort($dailyInventories, function($a, $b) {
+        usort($dailyInventories, function ($a, $b) {
             $profitRateA = (float)$a['profit_rate'];
             $profitRateB = (float)$b['profit_rate'];
             return $profitRateB <=> $profitRateA;

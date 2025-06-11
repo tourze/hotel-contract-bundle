@@ -3,7 +3,9 @@
 namespace Tourze\HotelContractBundle\Service;
 
 use Doctrine\ORM\EntityManagerInterface;
+use Psr\Cache\CacheItemPoolInterface;
 use Psr\Log\LoggerInterface;
+use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\Mime\Email;
 use Tourze\HotelContractBundle\Entity\InventorySummary;
@@ -18,19 +20,19 @@ class InventoryWarningService
         private readonly MailerInterface $mailer,
         private readonly LoggerInterface $logger,
         private readonly InventoryConfig $inventoryConfig,
-    ) {
-    }
+        #[Autowire(service: 'cache.app')] private readonly CacheItemPoolInterface $cache,
+    ) {}
 
     /**
      * 检查库存并发送预警邮件
-     * 
+     *
      * @param \DateTimeInterface|null $date 指定日期，为空则检查未来90天
      * @return array 处理结果
      */
     public function checkAndSendWarnings(?\DateTimeInterface $date = null): array
     {
         $config = $this->inventoryConfig->getWarningConfig();
-        
+
         // 如果未启用预警功能，直接返回
         if (!$config['enable_warning']) {
             return [
@@ -94,7 +96,6 @@ class InventoryWarningService
         }
 
         $sentCount = 0;
-        $cacheDir = $this->getCacheDir();
         $warningInterval = (int)$config['warning_interval'] * 3600; // 转换为秒
 
         foreach ($inventorySummaries as $summary) {
@@ -104,11 +105,11 @@ class InventoryWarningService
                 $summary->getRoomType()->getId(),
                 $summary->getDate()->format('Y-m-d')
             );
-            $cacheFile = $cacheDir . '/' . md5($cacheKey);
 
             // 检查是否在发送间隔期内已经发送过预警
-            if (file_exists($cacheFile)) {
-                $lastSent = (int)file_get_contents($cacheFile);
+            $cacheItem = $this->cache->getItem($cacheKey);
+            if ($cacheItem->isHit()) {
+                $lastSent = $cacheItem->get();
                 if (time() - $lastSent < $warningInterval) {
                     continue;
                 }
@@ -117,7 +118,12 @@ class InventoryWarningService
             // 发送预警邮件
             try {
                 $this->sendWarningEmail($summary, $recipients);
-                file_put_contents($cacheFile, time());
+
+                // 更新缓存
+                $cacheItem->set(time());
+                $cacheItem->expiresAfter($warningInterval);
+                $this->cache->save($cacheItem);
+
                 $sentCount++;
             } catch (\Exception $e) {
                 $this->logger->error('发送库存预警邮件失败: ' . $e->getMessage(), [
@@ -138,7 +144,7 @@ class InventoryWarningService
 
     /**
      * 发送库存预警邮件
-     * 
+     *
      * @param InventorySummary $summary 库存统计记录
      * @param array $recipients 收件人列表
      */
@@ -147,7 +153,7 @@ class InventoryWarningService
         $hotel = $summary->getHotel();
         $roomType = $summary->getRoomType();
         $date = $summary->getDate()->format('Y-m-d');
-        $availableRate = $summary->getTotalRooms() > 0 
+        $availableRate = $summary->getTotalRooms() > 0
             ? round(($summary->getAvailableRooms() / $summary->getTotalRooms()) * 100, 2)
             : 0;
 
@@ -161,14 +167,14 @@ class InventoryWarningService
 
         $body = sprintf(
             "尊敬的管理员：\n\n酒店 %s 的 %s 房型在 %s 的库存状态已经触发预警：\n\n" .
-            "- 总房间数: %d\n" .
-            "- 可用房间数: %d\n" .
-            "- 已售房间数: %d\n" .
-            "- 待确认房间数: %d\n" .
-            "- 预留房间数: %d\n" .
-            "- 剩余可用率: %.2f%%\n\n" .
-            "请及时处理此库存问题。\n\n" .
-            "此邮件由系统自动发送，请勿回复。",
+                "- 总房间数: %d\n" .
+                "- 可用房间数: %d\n" .
+                "- 已售房间数: %d\n" .
+                "- 待确认房间数: %d\n" .
+                "- 预留房间数: %d\n" .
+                "- 剩余可用率: %.2f%%\n\n" .
+                "请及时处理此库存问题。\n\n" .
+                "此邮件由系统自动发送，请勿回复。",
             $hotel->getName(),
             $roomType->getName(),
             $date,
@@ -191,18 +197,4 @@ class InventoryWarningService
 
         $this->mailer->send($email);
     }
-
-    /**
-     * 获取缓存目录
-     * 
-     * @return string 缓存目录
-     */
-    private function getCacheDir(): string
-    {
-        $cacheDir = dirname(__DIR__, 2) . '/var/cache/inventory_warnings';
-        if (!is_dir($cacheDir)) {
-            mkdir($cacheDir, 0755, true);
-        }
-        return $cacheDir;
-    }
-} 
+}

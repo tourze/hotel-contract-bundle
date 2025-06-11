@@ -12,8 +12,7 @@ class InventoryUpdateService
     public function __construct(
         private readonly EntityManagerInterface $entityManager,
         private readonly DailyInventoryRepository $inventoryRepository,
-    ) {
-    }
+    ) {}
 
     /**
      * 批量调整库存状态
@@ -126,11 +125,11 @@ class InventoryUpdateService
 
         // 构建查询条件
         $criteria = [];
-        
+
         if ($hotel) {
             $criteria['di.hotel'] = $hotel;
         }
-        
+
         if ($roomType) {
             $criteria['di.roomType'] = $roomType;
         }
@@ -265,9 +264,9 @@ class InventoryUpdateService
      * @return int 处理的记录数
      */
     public function batchClearContractAssociation(
-        int $hotelId, 
-        ?\DateTimeInterface $startDate, 
-        ?\DateTimeInterface $endDate, 
+        int $hotelId,
+        ?\DateTimeInterface $startDate,
+        ?\DateTimeInterface $endDate,
         ?int $roomTypeId = null,
         ?int $contractId = null
     ): int {
@@ -275,29 +274,29 @@ class InventoryUpdateService
         $qb = $this->inventoryRepository->createQueryBuilder('di')
             ->where('di.hotel = :hotelId')
             ->setParameter('hotelId', $hotelId);
-            
+
         if ($startDate) {
             $qb->andWhere('di.date >= :startDate')
                 ->setParameter('startDate', $startDate);
         }
-        
+
         if ($endDate) {
             $qb->andWhere('di.date <= :endDate')
                 ->setParameter('endDate', $endDate);
         }
-        
+
         if ($roomTypeId) {
             $qb->andWhere('di.roomType = :roomTypeId')
                 ->setParameter('roomTypeId', $roomTypeId);
         }
-        
+
         if ($contractId !== null) {
             $qb->andWhere('di.contract = :contractId')
                 ->setParameter('contractId', $contractId);
         }
-        
+
         $inventories = $qb->getQuery()->getResult();
-        
+
         $processedCount = 0;
         foreach ($inventories as $inventory) {
             // 检查是否已被预订
@@ -305,15 +304,15 @@ class InventoryUpdateService
                 // 已被预订的库存记录保持不变
                 continue;
             }
-            
+
             $this->clearInventoryContractAssociation($inventory);
             $processedCount++;
         }
-        
+
         if ($processedCount > 0) {
             $this->entityManager->flush();
         }
-        
+
         return $processedCount;
     }
 }

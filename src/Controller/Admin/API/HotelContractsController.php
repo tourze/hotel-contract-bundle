@@ -20,11 +20,11 @@ class HotelContractsController extends AbstractController
     public function getContractDetail(int $id, EntityManagerInterface $entityManager): JsonResponse
     {
         $contract = $entityManager->getRepository(HotelContract::class)->find($id);
-        
+
         if (!$contract) {
             return $this->json(['error' => 'Contract not found'], 404);
         }
-        
+
         return $this->json([
             'id' => $contract->getId(),
             'contractNo' => $contract->getContractNo(),

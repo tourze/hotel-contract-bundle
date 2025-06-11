@@ -16,8 +16,7 @@ class ContractService
         private readonly MailerInterface $mailer,
         private readonly LoggerInterface $logger,
         private readonly string $adminEmail = 'admin@example.com',
-    ) {
-    }
+    ) {}
 
     /**
      * 生成合同编号
@@ -27,7 +26,7 @@ class ContractService
     {
         $today = new \DateTime();
         $datePrefix = 'HT' . $today->format('Ymd');
-        
+
         // 查询今天已有的合同数量
         $count = $this->entityManager->getRepository(HotelContract::class)
             ->createQueryBuilder('c')
@@ -36,12 +35,12 @@ class ContractService
             ->setParameter('prefix', $datePrefix . '%')
             ->getQuery()
             ->getSingleScalarResult();
-        
+
         // 计算序号并生成编号
         $serialNumber = str_pad($count + 1, 3, '0', STR_PAD_LEFT);
         return $datePrefix . $serialNumber;
     }
-    
+
     /**
      * 审批合同
      */
@@ -49,17 +48,17 @@ class ContractService
     {
         $contract->setStatus(ContractStatusEnum::ACTIVE);
         $this->entityManager->flush();
-        
+
         // 发送审批通知邮件
         $this->sendContractStatusChangedNotification($contract, '合同已审批生效');
-        
+
         $this->logger->info('合同已审批生效', [
             'contractNo' => $contract->getContractNo(),
             'hotelId' => $contract->getHotel()->getId(),
             'hotelName' => $contract->getHotel()->getName(),
         ]);
     }
-    
+
     /**
      * 终止合同
      */
@@ -68,10 +67,10 @@ class ContractService
         $contract->setStatus(ContractStatusEnum::TERMINATED);
         $contract->setTerminationReason($terminationReason);
         $this->entityManager->flush();
-        
+
         // 发送终止通知邮件
         $this->sendContractStatusChangedNotification($contract, '合同已终止', $terminationReason);
-        
+
         $this->logger->info('合同已终止', [
             'contractNo' => $contract->getContractNo(),
             'hotelId' => $contract->getHotel()->getId(),
@@ -79,7 +78,7 @@ class ContractService
             'terminationReason' => $terminationReason,
         ]);
     }
-    
+
     /**
      * 调整合同优先级
      */
@@ -88,7 +87,7 @@ class ContractService
         $oldPriority = $contract->getPriority();
         $contract->setPriority($newPriority);
         $this->entityManager->flush();
-        
+
         $this->logger->info('合同优先级已调整', [
             'contractNo' => $contract->getContractNo(),
             'hotelId' => $contract->getHotel()->getId(),
@@ -97,7 +96,7 @@ class ContractService
             'newPriority' => $newPriority,
         ]);
     }
-    
+
     /**
      * 发送合同创建通知
      */
@@ -105,7 +104,7 @@ class ContractService
     {
         $hotelName = $contract->getHotel()->getName();
         $contractNo = $contract->getContractNo();
-        
+
         $email = (new Email())
             ->from('noreply@hotel-booking-system.com')
             ->to($this->adminEmail)
@@ -124,7 +123,7 @@ class ContractService
                 <p>请及时审核并确认合同信息。</p>
                 <p>此邮件由系统自动发送，请勿回复。</p>
             ");
-        
+
         try {
             $this->mailer->send($email);
             $this->logger->info('合同创建通知邮件已发送', ['contractNo' => $contractNo]);
@@ -135,7 +134,7 @@ class ContractService
             ]);
         }
     }
-    
+
     /**
      * 发送合同更新通知
      */
@@ -143,7 +142,7 @@ class ContractService
     {
         $hotelName = $contract->getHotel()->getName();
         $contractNo = $contract->getContractNo();
-        
+
         $email = (new Email())
             ->from('noreply@hotel-booking-system.com')
             ->to($this->adminEmail)
@@ -162,7 +161,7 @@ class ContractService
                 </ul>
                 <p>此邮件由系统自动发送，请勿回复。</p>
             ");
-        
+
         try {
             $this->mailer->send($email);
             $this->logger->info('合同更新通知邮件已发送', ['contractNo' => $contractNo]);
@@ -173,7 +172,7 @@ class ContractService
             ]);
         }
     }
-    
+
     /**
      * 发送合同状态变更通知
      */
@@ -182,9 +181,9 @@ class ContractService
         $hotelName = $contract->getHotel()->getName();
         $contractNo = $contract->getContractNo();
         $statusText = $contract->getStatus()->getLabel();
-        
+
         $reasonHtml = $reason ? "<p>变更原因：{$reason}</p>" : '';
-        
+
         $email = (new Email())
             ->from('noreply@hotel-booking-system.com')
             ->to($this->adminEmail)
@@ -201,7 +200,7 @@ class ContractService
                 {$reasonHtml}
                 <p>此邮件由系统自动发送，请勿回复。</p>
             ");
-        
+
         try {
             $this->mailer->send($email);
             $this->logger->info('合同状态变更通知邮件已发送', [

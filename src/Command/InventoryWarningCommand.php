@@ -52,7 +52,7 @@ class InventoryWarningCommand extends Command
         if ($input->getOption('sync')) {
             $io->section('同步库存统计数据');
             $syncResult = $this->summaryService->syncInventorySummary($date);
-            
+
             if ($syncResult['success']) {
                 $io->success($syncResult['message']);
             } else {
@@ -77,4 +77,4 @@ class InventoryWarningCommand extends Command
             return Command::FAILURE;
         }
     }
-} 
+}

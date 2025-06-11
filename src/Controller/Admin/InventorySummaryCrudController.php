@@ -42,8 +42,7 @@ class InventorySummaryCrudController extends AbstractCrudController
         private readonly RequestStack $requestStack,
         private readonly InventoryConfig $inventoryConfig,
         private readonly PriceManagementService $priceManagementService,
-    ) {
-    }
+    ) {}
 
     public static function getEntityFqcn(): string
     {
@@ -182,8 +181,7 @@ class InventorySummaryCrudController extends AbstractCrudController
         EntityDto        $entityDto,
         FieldCollection  $fields,
         FilterCollection $filters
-    ): QueryBuilder
-    {
+    ): QueryBuilder {
         $queryBuilder = parent::createIndexQueryBuilder($searchDto, $entityDto, $fields, $filters);
         $rootAlias = $queryBuilder->getRootAliases()[0];
 
@@ -203,7 +201,7 @@ class InventorySummaryCrudController extends AbstractCrudController
     {
         // 获取当前筛选条件
         $request = $this->requestStack->getCurrentRequest();
-        $filters = $request->query->get('filters', []);
+        $filters = $request->query->all('filters') ?: [];
 
         // 构建查询
         $qb = $this->entityManager->createQueryBuilder();
@@ -506,7 +504,7 @@ class InventorySummaryCrudController extends AbstractCrudController
                 'price_type' => $request->request->get('price_type'),
                 'adjust_method' => $request->request->get('adjust_method'),
                 'day_filter' => $request->request->get('day_filter'),
-                'days' => $request->request->get('days', []),
+                'days' => $request->request->all('days') ?: [],
                 'reason' => $request->request->get('reason'),
                 'price_value' => $request->request->get('price_value'),
                 'adjust_value' => $request->request->get('adjust_value'),
@@ -562,7 +560,7 @@ class InventorySummaryCrudController extends AbstractCrudController
         }
 
         $result = $this->priceManagementService->updateContractPrice((int)$inventoryId, (string)$costPrice);
-        
+
         return $this->json($result);
     }
 
@@ -584,7 +582,7 @@ class InventorySummaryCrudController extends AbstractCrudController
         }
 
         $result = $this->priceManagementService->updateSellingPrice((int)$inventoryId, (string)$sellingPrice);
-        
+
         return $this->json($result);
     }
 
@@ -599,13 +597,13 @@ class InventorySummaryCrudController extends AbstractCrudController
         }
 
         $data = json_decode($request->getContent(), true);
-        
+
         if (!$data) {
             return $this->json(['success' => false, 'message' => '请求数据格式错误'], 400);
         }
 
         $result = $this->priceManagementService->processBatchPriceAdjustment($data);
-        
+
         return $this->json($result);
     }
 }
