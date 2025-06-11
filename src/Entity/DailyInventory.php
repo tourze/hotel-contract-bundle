@@ -16,7 +16,7 @@ use Tourze\HotelProfileBundle\Entity\RoomType;
 
 #[ORM\Entity(repositoryClass: DailyInventoryRepository::class)]
 #[ORM\Table(name: 'daily_inventory', options: ['comment' => '日库存表'])]
-#[ORM\Index(name: 'daily_inventory_idx_roomtype_date', columns: ['room_type_id', 'date'])]
+#[ORM\Index(name: 'daily_inventory_idx_room_type_date', columns: ['room_type_id', 'date'])]
 #[ORM\Index(name: 'daily_inventory_idx_hotel_date', columns: ['hotel_id', 'date'])]
 #[ORM\Index(name: 'daily_inventory_idx_contract_date', columns: ['contract_id', 'date'])]
 #[ORM\Index(name: 'daily_inventory_idx_date_status', columns: ['date', 'status'])]

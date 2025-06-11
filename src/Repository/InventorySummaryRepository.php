@@ -53,13 +53,13 @@ class InventorySummaryRepository extends ServiceEntityRepository
      */
     public function findByHotelRoomTypeAndDate(int $hotelId, int $roomTypeId, \DateTimeInterface $date): ?InventorySummary
     {
-        return $this->createQueryBuilder('is')
-            ->andWhere('is.hotel = :hotelId')
-            ->andWhere('is.roomType = :roomTypeId')
-            ->andWhere('is.date = :date')
+        return $this->createQueryBuilder('inv_sum')
+            ->andWhere('inv_sum.hotel = :hotelId')
+            ->andWhere('inv_sum.roomType = :roomTypeId')
+            ->andWhere('inv_sum.date = :date')
             ->setParameter('hotelId', $hotelId)
             ->setParameter('roomTypeId', $roomTypeId)
-            ->setParameter('date', $date)
+            ->setParameter('date', $date->format('Y-m-d'))
             ->getQuery()
             ->getOneOrNullResult();
     }
@@ -69,12 +69,12 @@ class InventorySummaryRepository extends ServiceEntityRepository
      */
     public function findByDateRange(\DateTimeInterface $startDate, \DateTimeInterface $endDate): array
     {
-        return $this->createQueryBuilder('is')
-            ->andWhere('is.date >= :startDate')
-            ->andWhere('is.date <= :endDate')
-            ->setParameter('startDate', $startDate)
-            ->setParameter('endDate', $endDate)
-            ->orderBy('is.date', 'ASC')
+        return $this->createQueryBuilder('inv_sum')
+            ->andWhere('inv_sum.date >= :startDate')
+            ->andWhere('inv_sum.date <= :endDate')
+            ->setParameter('startDate', $startDate->format('Y-m-d'))
+            ->setParameter('endDate', $endDate->format('Y-m-d'))
+            ->orderBy('inv_sum.date', 'ASC')
             ->getQuery()
             ->getResult();
     }
@@ -84,10 +84,10 @@ class InventorySummaryRepository extends ServiceEntityRepository
      */
     public function findByHotelId(int $hotelId): array
     {
-        return $this->createQueryBuilder('is')
-            ->andWhere('is.hotel = :hotelId')
+        return $this->createQueryBuilder('inv_sum')
+            ->andWhere('inv_sum.hotel = :hotelId')
             ->setParameter('hotelId', $hotelId)
-            ->orderBy('is.date', 'ASC')
+            ->orderBy('inv_sum.date', 'ASC')
             ->getQuery()
             ->getResult();
     }
@@ -97,10 +97,10 @@ class InventorySummaryRepository extends ServiceEntityRepository
      */
     public function findByRoomTypeId(int $roomTypeId): array
     {
-        return $this->createQueryBuilder('is')
-            ->andWhere('is.roomType = :roomTypeId')
+        return $this->createQueryBuilder('inv_sum')
+            ->andWhere('inv_sum.roomType = :roomTypeId')
             ->setParameter('roomTypeId', $roomTypeId)
-            ->orderBy('is.date', 'ASC')
+            ->orderBy('inv_sum.date', 'ASC')
             ->getQuery()
             ->getResult();
     }
@@ -110,9 +110,9 @@ class InventorySummaryRepository extends ServiceEntityRepository
      */
     public function findByDate(\DateTimeInterface $date): array
     {
-        return $this->createQueryBuilder('is')
-            ->andWhere('is.date = :date')
-            ->setParameter('date', $date)
+        return $this->createQueryBuilder('inv_sum')
+            ->andWhere('inv_sum.date = :date')
+            ->setParameter('date', $date->format('Y-m-d'))
             ->getQuery()
             ->getResult();
     }
@@ -122,10 +122,10 @@ class InventorySummaryRepository extends ServiceEntityRepository
      */
     public function findByStatus(InventorySummaryStatusEnum $status): array
     {
-        return $this->createQueryBuilder('is')
-            ->andWhere('is.status = :status')
+        return $this->createQueryBuilder('inv_sum')
+            ->andWhere('inv_sum.status = :status')
             ->setParameter('status', $status)
-            ->orderBy('is.date', 'ASC')
+            ->orderBy('inv_sum.date', 'ASC')
             ->getQuery()
             ->getResult();
     }
@@ -135,10 +135,10 @@ class InventorySummaryRepository extends ServiceEntityRepository
      */
     public function findWarningInventory(): array
     {
-        return $this->createQueryBuilder('is')
-            ->andWhere('is.status = :warning')
+        return $this->createQueryBuilder('inv_sum')
+            ->andWhere('inv_sum.status = :warning')
             ->setParameter('warning', InventorySummaryStatusEnum::WARNING)
-            ->orderBy('is.date', 'ASC')
+            ->orderBy('inv_sum.date', 'ASC')
             ->getQuery()
             ->getResult();
     }
@@ -148,10 +148,10 @@ class InventorySummaryRepository extends ServiceEntityRepository
      */
     public function findSoldOutInventory(): array
     {
-        return $this->createQueryBuilder('is')
-            ->andWhere('is.status = :soldOut')
+        return $this->createQueryBuilder('inv_sum')
+            ->andWhere('inv_sum.status = :soldOut')
             ->setParameter('soldOut', InventorySummaryStatusEnum::SOLD_OUT)
-            ->orderBy('is.date', 'ASC')
+            ->orderBy('inv_sum.date', 'ASC')
             ->getQuery()
             ->getResult();
     }

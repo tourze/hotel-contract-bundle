@@ -49,17 +49,26 @@ class DailyInventoryRepository extends ServiceEntityRepository
     }
 
     /**
+     * 根据房型ID和日期查找库存
+     */
+    public function findByRoomTypeAndDate(int $roomTypeId, \DateTimeInterface $date): ?DailyInventory
+    {
+        return $this->createQueryBuilder('di')
+            ->andWhere('di.roomType = :roomTypeId')
+            ->andWhere('di.date = :date')
+            ->setParameter('roomTypeId', $roomTypeId)
+            ->setParameter('date', $date->format('Y-m-d'))
+            ->getQuery()
+            ->getOneOrNullResult();
+    }
+
+    /**
      * 根据房间ID和日期查找库存
+     * @deprecated 使用 findByRoomTypeAndDate 替代
      */
     public function findByRoomAndDate(int $roomId, \DateTimeInterface $date): ?DailyInventory
     {
-        return $this->createQueryBuilder('di')
-            ->andWhere('di.room = :roomId')
-            ->andWhere('di.date = :date')
-            ->setParameter('roomId', $roomId)
-            ->setParameter('date', $date)
-            ->getQuery()
-            ->getOneOrNullResult();
+        return $this->findByRoomTypeAndDate($roomId, $date);
     }
 
     /**
@@ -71,10 +80,9 @@ class DailyInventoryRepository extends ServiceEntityRepository
             ->andWhere('di.date >= :startDate')
             ->andWhere('di.date <= :endDate')
             ->andWhere('di.status = :status')
-            ->setParameter('startDate', $startDate)
-            ->setParameter('endDate', $endDate)
+            ->setParameter('startDate', $startDate->format('Y-m-d'))
+            ->setParameter('endDate', $endDate->format('Y-m-d'))
             ->setParameter('status', DailyInventoryStatusEnum::AVAILABLE)
-            ->setParameter('isAvailable', true)
             ->orderBy('di.date', 'ASC')
             ->getQuery()
             ->getResult();
@@ -100,22 +108,31 @@ class DailyInventoryRepository extends ServiceEntityRepository
     {
         return $this->createQueryBuilder('di')
             ->andWhere('di.date = :date')
-            ->setParameter('date', $date)
+            ->setParameter('date', $date->format('Y-m-d'))
+            ->getQuery()
+            ->getResult();
+    }
+
+    /**
+     * 根据房型ID查找库存
+     */
+    public function findByRoomTypeId(int $roomTypeId): array
+    {
+        return $this->createQueryBuilder('di')
+            ->andWhere('di.roomType = :roomTypeId')
+            ->setParameter('roomTypeId', $roomTypeId)
+            ->orderBy('di.date', 'ASC')
             ->getQuery()
             ->getResult();
     }
 
     /**
      * 根据房间ID查找库存
+     * @deprecated 使用 findByRoomTypeId 替代
      */
     public function findByRoomId(int $roomId): array
     {
-        return $this->createQueryBuilder('di')
-            ->andWhere('di.room = :roomId')
-            ->setParameter('roomId', $roomId)
-            ->orderBy('di.date', 'ASC')
-            ->getQuery()
-            ->getResult();
+        return $this->findByRoomTypeId($roomId);
     }
 
     /**
@@ -151,7 +168,7 @@ class DailyInventoryRepository extends ServiceEntityRepository
      * 根据合同和日期范围查询价格数据
      */
     public function findPriceDataByContractAndDateRange(
-        int                $contractId,
+        int $contractId,
         \DateTimeInterface $startDate,
         \DateTimeInterface $endDate
     ): array
@@ -171,8 +188,8 @@ class DailyInventoryRepository extends ServiceEntityRepository
             ->andWhere('di.date >= :startDate')
             ->andWhere('di.date <= :endDate')
             ->setParameter('contractId', $contractId)
-            ->setParameter('startDate', $startDate)
-            ->setParameter('endDate', $endDate)
+            ->setParameter('startDate', $startDate->format('Y-m-d'))
+            ->setParameter('endDate', $endDate->format('Y-m-d'))
             ->orderBy('rt.id', 'ASC')
             ->addOrderBy('di.code', 'ASC')
             ->addOrderBy('di.date', 'ASC')
@@ -186,7 +203,7 @@ class DailyInventoryRepository extends ServiceEntityRepository
     public function findByDateRangeAndCriteria(
         \DateTimeInterface $startDate,
         \DateTimeInterface $endDate,
-        array              $criteria = []
+        array $criteria = []
     ): array
     {
         $qb = $this->createQueryBuilder('di')
@@ -194,8 +211,8 @@ class DailyInventoryRepository extends ServiceEntityRepository
             ->join('di.hotel', 'h')
             ->andWhere('di.date >= :startDate')
             ->andWhere('di.date <= :endDate')
-            ->setParameter('startDate', $startDate)
-            ->setParameter('endDate', $endDate);
+            ->setParameter('startDate', $startDate->format('Y-m-d'))
+            ->setParameter('endDate', $endDate->format('Y-m-d'));
 
         // 添加自定义条件
         foreach ($criteria as $field => $value) {
@@ -243,8 +260,8 @@ class DailyInventoryRepository extends ServiceEntityRepository
             ->join('di.hotel', 'h')
             ->andWhere('di.date >= :startDate')
             ->andWhere('di.date <= :endDate')
-            ->setParameter('startDate', $startDate)
-            ->setParameter('endDate', $endDate);
+            ->setParameter('startDate', $startDate->format('Y-m-d'))
+            ->setParameter('endDate', $endDate->format('Y-m-d'));
 
         // 添加自定义条件
         foreach ($criteria as $field => $value) {

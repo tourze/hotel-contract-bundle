@@ -9,6 +9,8 @@ use Symfony\Bundle\SecurityBundle\SecurityBundle;
 use Symfony\Bundle\TwigBundle\TwigBundle;
 use Symfony\Component\HttpKernel\Bundle\Bundle;
 use Tourze\BundleDependency\BundleDependencyInterface;
+use Tourze\DoctrineTimestampBundle\DoctrineTimestampBundle;
+use Tourze\DoctrineUserBundle\DoctrineUserBundle;
 use Tourze\EnvManageBundle\EnvManageBundle;
 use Tourze\HotelProfileBundle\HotelProfileBundle;
 use Tourze\RoutingAutoLoaderBundle\RoutingAutoLoaderBundle;
@@ -26,6 +28,8 @@ class HotelContractBundle extends Bundle implements BundleDependencyInterface
             RoutingAutoLoaderBundle::class => ['all' => true],
             HotelProfileBundle::class => ['all' => true],
             EnvManageBundle::class => ['all' => true],
+            DoctrineTimestampBundle::class => ['all' => true],
+            DoctrineUserBundle::class => ['all' => true],
         ];
     }
 }

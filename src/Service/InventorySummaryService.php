@@ -20,8 +20,7 @@ class InventorySummaryService
         private readonly DailyInventoryRepository $inventoryRepository,
         private readonly InventorySummaryRepository $inventorySummaryRepository,
         private readonly InventoryConfig $inventoryConfig,
-    ) {
-    }
+    ) {}
 
     /**
      * 同步库存统计
@@ -77,7 +76,7 @@ class InventorySummaryService
                 $summary = new InventorySummary();
                 $summary->setHotel($hotel)
                     ->setRoomType($roomType)
-                    ->setDate($result['date']);
+                    ->setDate(new \DateTime($result['date']));
                 $createdCount++;
             } else {
                 $updatedCount++;

@@ -5,6 +5,7 @@ namespace Tourze\HotelContractBundle\Repository;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 use Tourze\HotelContractBundle\Entity\HotelContract;
+use Tourze\HotelContractBundle\Enum\ContractStatusEnum;
 
 /**
  * 酒店合同仓库类
@@ -67,7 +68,7 @@ class HotelContractRepository extends ServiceEntityRepository
     {
         return $this->createQueryBuilder('hc')
             ->andWhere('hc.status = :status')
-            ->setParameter('status', 'active')
+            ->setParameter('status', ContractStatusEnum::ACTIVE)
             ->orderBy('hc.id', 'ASC')
             ->getQuery()
             ->getResult();
@@ -94,7 +95,7 @@ class HotelContractRepository extends ServiceEntityRepository
             ->andWhere('hc.status = :status')
             ->andWhere('hc.startDate <= :endDate')
             ->andWhere('hc.endDate >= :startDate')
-            ->setParameter('status', 'active')
+            ->setParameter('status', ContractStatusEnum::ACTIVE)
             ->setParameter('startDate', $startDate)
             ->setParameter('endDate', $endDate)
             ->orderBy('hc.priority', 'DESC')
