@@ -93,7 +93,7 @@ class PriceManagementService
             ]);
 
             return ['success' => true, 'message' => '价格更新成功'];
-        } catch (\Throwable $e) {
+        } catch  (\Throwable $e) {
             $this->logger->error('合同价格更新失败', [
                 'inventory_id' => $inventoryId,
                 'cost_price' => $costPrice,
@@ -190,7 +190,7 @@ class PriceManagementService
             ]);
 
             return ['success' => true, 'message' => '销售价格更新成功'];
-        } catch (\Throwable $e) {
+        } catch  (\Throwable $e) {
             $this->logger->error('销售价格更新失败', [
                 'inventory_id' => $inventoryId,
                 'selling_price' => $sellingPrice,
@@ -264,7 +264,7 @@ class PriceManagementService
             ]);
 
             return $result ?: ['success' => false, 'message' => '调价失败'];
-        } catch (\Throwable $e) {
+        } catch  (\Throwable $e) {
             $this->logger->error('批量调价失败', [
                 'params' => $params,
                 'exception' => $e
@@ -354,7 +354,7 @@ class PriceManagementService
                 'success' => true,
                 'message' => "成功调整 {$updateCount} 个库存的价格"
             ];
-        } catch (\Throwable $e) {
+        } catch  (\Throwable $e) {
             $this->logger->error('单日期价格调整失败', [
                 'params' => $params,
                 'exception' => $e

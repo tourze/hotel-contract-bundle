@@ -127,7 +127,7 @@ class RoomTypeInventoryService
                 );
 
                 $result['created'] += count($dailyCount);
-            } catch (\Throwable $e) {
+            } catch  (\Throwable $e) {
                 $result['errors'][] = [
                     'date' => $currentDate->format('Y-m-d'),
                     'message' => $e->getMessage()

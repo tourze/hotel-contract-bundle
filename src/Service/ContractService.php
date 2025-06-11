@@ -127,7 +127,7 @@ class ContractService
         try {
             $this->mailer->send($email);
             $this->logger->info('合同创建通知邮件已发送', ['contractNo' => $contractNo]);
-        } catch (\Throwable $e) {
+        } catch  (\Throwable $e) {
             $this->logger->error('合同创建通知邮件发送失败', [
                 'contractNo' => $contractNo,
                 'error' => $e->getMessage(),
@@ -165,7 +165,7 @@ class ContractService
         try {
             $this->mailer->send($email);
             $this->logger->info('合同更新通知邮件已发送', ['contractNo' => $contractNo]);
-        } catch (\Throwable $e) {
+        } catch  (\Throwable $e) {
             $this->logger->error('合同更新通知邮件发送失败', [
                 'contractNo' => $contractNo,
                 'error' => $e->getMessage(),
@@ -207,7 +207,7 @@ class ContractService
                 'contractNo' => $contractNo,
                 'status' => $statusText,
             ]);
-        } catch (\Throwable $e) {
+        } catch  (\Throwable $e) {
             $this->logger->error('合同状态变更通知邮件发送失败', [
                 'contractNo' => $contractNo,
                 'error' => $e->getMessage(),
