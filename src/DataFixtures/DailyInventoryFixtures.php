@@ -26,7 +26,7 @@ class DailyInventoryFixtures extends Fixture implements DependentFixtureInterfac
             try {
                 $contract = $this->getReference(HotelContractFixtures::CONTRACT_REFERENCE_PREFIX . $i, HotelContract::class);
                 $contracts[] = $contract;
-            } catch (\Exception $e) {
+            } catch (\Throwable $e) {
                 // 忽略找不到的引用
                 continue;
             }

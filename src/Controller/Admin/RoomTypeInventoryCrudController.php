@@ -291,7 +291,7 @@ class RoomTypeInventoryCrudController extends AbstractCrudController
             } else {
                 $this->addFlash('danger', $result['message']);
             }
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             $this->addFlash('danger', '创建库存失败: ' . $e->getMessage());
         }
 
@@ -487,7 +487,7 @@ class RoomTypeInventoryCrudController extends AbstractCrudController
                                     $skippedDaysCount
                                 ));
                             }
-                        } catch (\Exception $e) {
+                        } catch (\Throwable $e) {
                             $this->logger->error('生成库存失败', [
                                 'exception' => $e,
                             ]);
@@ -513,7 +513,7 @@ class RoomTypeInventoryCrudController extends AbstractCrudController
 
             // 提交事务
             $em->getConnection()->commit();
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             // 回滚事务
             $em->getConnection()->rollBack();
             $this->addFlash('danger', '批量生成库存失败: ' . $e->getMessage());
