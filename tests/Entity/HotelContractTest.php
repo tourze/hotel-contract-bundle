@@ -76,7 +76,7 @@ class HotelContractTest extends TestCase
 
     public function test_setStartDate_returnsInstance_withValidDate(): void
     {
-        $date = new \DateTime('2024-01-01');
+        $date = new \DateTimeImmutable('2024-01-01');
         $result = $this->contract->setStartDate($date);
         
         $this->assertSame($this->contract, $result);
@@ -93,7 +93,7 @@ class HotelContractTest extends TestCase
 
     public function test_setEndDate_returnsInstance_withValidDate(): void
     {
-        $date = new \DateTime('2024-12-31');
+        $date = new \DateTimeImmutable('2024-12-31');
         $result = $this->contract->setEndDate($date);
         
         $this->assertSame($this->contract, $result);
@@ -277,7 +277,7 @@ class HotelContractTest extends TestCase
 
     public function test_setCreateTime_setsValue_withValidDateTime(): void
     {
-        $dateTime = new \DateTime('2024-01-01 10:00:00');
+        $dateTime = new \DateTimeImmutable('2024-01-01 10:00:00');
         $this->contract->setCreateTime($dateTime);
         
         $this->assertSame($dateTime, $this->contract->getCreateTime());
@@ -285,7 +285,7 @@ class HotelContractTest extends TestCase
 
     public function test_setUpdateTime_setsValue_withValidDateTime(): void
     {
-        $dateTime = new \DateTime('2024-01-01 10:00:00');
+        $dateTime = new \DateTimeImmutable('2024-01-01 10:00:00');
         $this->contract->setUpdateTime($dateTime);
         
         $this->assertSame($dateTime, $this->contract->getUpdateTime());

@@ -244,8 +244,8 @@ class ContractServiceTest extends TestCase
         $contract->setContractNo('HT20241201001');
         $contract->setHotel($hotel);
         $contract->setContractType(ContractTypeEnum::FIXED_PRICE);
-        $contract->setStartDate(new \DateTime('2024-01-01'));
-        $contract->setEndDate(new \DateTime('2024-12-31'));
+        $contract->setStartDate(new \DateTimeImmutable('2024-01-01'));
+        $contract->setEndDate(new \DateTimeImmutable('2024-12-31'));
         $contract->setTotalAmount(100000.00);
 
         // Mock期望
@@ -279,8 +279,8 @@ class ContractServiceTest extends TestCase
         $contract->setContractNo('HT20241201001');
         $contract->setHotel($hotel);
         $contract->setContractType(ContractTypeEnum::FIXED_PRICE);
-        $contract->setStartDate(new \DateTime('2024-01-01'));
-        $contract->setEndDate(new \DateTime('2024-12-31'));
+        $contract->setStartDate(new \DateTimeImmutable('2024-01-01'));
+        $contract->setEndDate(new \DateTimeImmutable('2024-12-31'));
         $contract->setTotalAmount(100000.00);
 
         // Mock期望 - 邮件发送失败
@@ -310,8 +310,8 @@ class ContractServiceTest extends TestCase
         $contract->setHotel($hotel);
         $contract->setContractType(ContractTypeEnum::FIXED_PRICE);
         $contract->setStatus(ContractStatusEnum::ACTIVE);
-        $contract->setStartDate(new \DateTime('2024-01-01'));
-        $contract->setEndDate(new \DateTime('2024-12-31'));
+        $contract->setStartDate(new \DateTimeImmutable('2024-01-01'));
+        $contract->setEndDate(new \DateTimeImmutable('2024-12-31'));
         $contract->setTotalAmount(100000.00);
 
         // Mock期望
@@ -346,8 +346,8 @@ class ContractServiceTest extends TestCase
         $contract->setHotel($hotel);
         $contract->setContractType(ContractTypeEnum::FIXED_PRICE);
         $contract->setStatus(ContractStatusEnum::ACTIVE);
-        $contract->setStartDate(new \DateTime('2024-01-01'));
-        $contract->setEndDate(new \DateTime('2024-12-31'));
+        $contract->setStartDate(new \DateTimeImmutable('2024-01-01'));
+        $contract->setEndDate(new \DateTimeImmutable('2024-12-31'));
         $contract->setTotalAmount(100000.00);
 
         // Mock期望 - 邮件发送失败

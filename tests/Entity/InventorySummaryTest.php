@@ -69,7 +69,7 @@ class InventorySummaryTest extends TestCase
 
     public function test_setDate_returnsInstance_withValidDate(): void
     {
-        $date = new \DateTime('2024-01-01');
+        $date = new \DateTimeImmutable('2024-01-01');
         $result = $this->summary->setDate($date);
         
         $this->assertSame($this->summary, $result);
@@ -254,7 +254,7 @@ class InventorySummaryTest extends TestCase
 
     public function test_setCreateTime_setsValue_withValidDateTime(): void
     {
-        $dateTime = new \DateTime('2024-01-01 10:00:00');
+        $dateTime = new \DateTimeImmutable('2024-01-01 10:00:00');
         $this->summary->setCreateTime($dateTime);
         
         $this->assertSame($dateTime, $this->summary->getCreateTime());
@@ -262,7 +262,7 @@ class InventorySummaryTest extends TestCase
 
     public function test_setUpdateTime_setsValue_withValidDateTime(): void
     {
-        $dateTime = new \DateTime('2024-01-01 10:00:00');
+        $dateTime = new \DateTimeImmutable('2024-01-01 10:00:00');
         $this->summary->setUpdateTime($dateTime);
         
         $this->assertSame($dateTime, $this->summary->getUpdateTime());
@@ -326,7 +326,7 @@ class InventorySummaryTest extends TestCase
         
         $this->summary->setHotel($hotel);
         $this->summary->setRoomType($roomType);
-        $this->summary->setDate(new \DateTime('2024-01-01'));
+        $this->summary->setDate(new \DateTimeImmutable('2024-01-01'));
         
         $expected = 'Grand Hotel - Deluxe Room - 2024-01-01';
         $this->assertSame($expected, (string)$this->summary);
@@ -338,7 +338,7 @@ class InventorySummaryTest extends TestCase
         $roomType->method('getName')->willReturn('Deluxe Room');
         
         $this->summary->setRoomType($roomType);
-        $this->summary->setDate(new \DateTime('2024-01-01'));
+        $this->summary->setDate(new \DateTimeImmutable('2024-01-01'));
         
         $expected = 'Unknown - Deluxe Room - 2024-01-01';
         $this->assertSame($expected, (string)$this->summary);
@@ -350,7 +350,7 @@ class InventorySummaryTest extends TestCase
         $hotel->method('getName')->willReturn('Grand Hotel');
         
         $this->summary->setHotel($hotel);
-        $this->summary->setDate(new \DateTime('2024-01-01'));
+        $this->summary->setDate(new \DateTimeImmutable('2024-01-01'));
         
         $expected = 'Grand Hotel - Unknown - 2024-01-01';
         $this->assertSame($expected, (string)$this->summary);

@@ -32,7 +32,7 @@ class InventorySummary implements Stringable
     #[ORM\JoinColumn(name: 'room_type_id', nullable: false)]
     private ?RoomType $roomType = null;
 
-    #[ORM\Column(type: Types::DATE_MUTABLE, options: ['comment' => '统计日期'])]
+    #[ORM\Column(type: Types::DATE_IMMUTABLE, options: ['comment' => '统计日期'])]
     private ?\DateTimeInterface $date = null;
 
     #[ORM\Column(type: Types::INTEGER, options: ['comment' => '该房型总房间数'])]
@@ -67,11 +67,11 @@ class InventorySummary implements Stringable
     private ?HotelContract $lowestContract = null;
 
     #[CreateTimeColumn]
-    #[ORM\Column(type: Types::DATETIME_MUTABLE)]
+    #[ORM\Column(type: Types::DATETIME_IMMUTABLE)]
     private ?\DateTimeInterface $createTime = null;
 
     #[UpdateTimeColumn]
-    #[ORM\Column(type: Types::DATETIME_MUTABLE, nullable: true)]
+    #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
     private ?\DateTimeInterface $updateTime = null;
 
     public function __toString(): string

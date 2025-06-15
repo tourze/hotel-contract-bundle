@@ -168,8 +168,8 @@ class InventoryUpdateServiceTest extends TestCase
 
         $params = [
             'hotel' => $hotel,
-            'start_date' => new \DateTime('2024-01-01'),
-            'end_date' => new \DateTime('2024-01-03'),
+            'start_date' => new \DateTimeImmutable('2024-01-01'),
+            'end_date' => new \DateTimeImmutable('2024-01-03'),
             'price_type' => 'cost',
             'adjust_method' => 'fixed',
             'cost_price' => '150.00'
@@ -211,8 +211,8 @@ class InventoryUpdateServiceTest extends TestCase
 
         $params = [
             'hotel' => $hotel,
-            'start_date' => new \DateTime('2024-01-01'),
-            'end_date' => new \DateTime('2024-01-03'),
+            'start_date' => new \DateTimeImmutable('2024-01-01'),
+            'end_date' => new \DateTimeImmutable('2024-01-03'),
             'price_type' => 'cost',
             'adjust_method' => 'percent',
             'adjust_value' => 20 // 增加20%
@@ -251,8 +251,8 @@ class InventoryUpdateServiceTest extends TestCase
 
         $params = [
             'hotel' => $hotel,
-            'start_date' => new \DateTime('2024-01-01'),
-            'end_date' => new \DateTime('2024-01-03'),
+            'start_date' => new \DateTimeImmutable('2024-01-01'),
+            'end_date' => new \DateTimeImmutable('2024-01-03'),
             'price_type' => 'selling',
             'adjust_method' => 'decrement',
             'adjust_value' => 30 // 减少30元
@@ -291,8 +291,8 @@ class InventoryUpdateServiceTest extends TestCase
 
         $params = [
             'hotel' => $hotel,
-            'start_date' => new \DateTime('2024-01-01'),
-            'end_date' => new \DateTime('2024-01-03'),
+            'start_date' => new \DateTimeImmutable('2024-01-01'),
+            'end_date' => new \DateTimeImmutable('2024-01-03'),
             'price_type' => 'cost',
             'adjust_method' => 'decrement',
             'adjust_value' => 150 // 减少150元，但原价只有100
@@ -349,8 +349,8 @@ class InventoryUpdateServiceTest extends TestCase
     public function testBatchClearContractAssociation(): void
     {
         $hotelId = 1;
-        $startDate = new \DateTime('2024-01-01');
-        $endDate = new \DateTime('2024-01-03');
+        $startDate = new \DateTimeImmutable('2024-01-01');
+        $endDate = new \DateTimeImmutable('2024-01-03');
         $roomTypeId = 1;
         $contractId = 1;
 
@@ -418,8 +418,8 @@ class InventoryUpdateServiceTest extends TestCase
     public function testBatchClearContractAssociationBasicParams(): void
     {
         $hotelId = 1;
-        $startDate = new \DateTime('2024-01-01');
-        $endDate = new \DateTime('2024-01-03');
+        $startDate = new \DateTimeImmutable('2024-01-01');
+        $endDate = new \DateTimeImmutable('2024-01-03');
 
         // 创建测试数据 - 5个库存记录
         $inventories = [];

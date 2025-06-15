@@ -93,8 +93,8 @@ class DailyInventoryRepositoryTest extends KernelTestCase
         $contract->setContractNo('CONTRACT-001');
         $contract->setHotel($hotel);
         $contract->setContractType(ContractTypeEnum::FIXED_PRICE);
-        $contract->setStartDate(new \DateTime('2024-01-01'));
-        $contract->setEndDate(new \DateTime('2024-12-31'));
+        $contract->setStartDate(new \DateTimeImmutable('2024-01-01'));
+        $contract->setEndDate(new \DateTimeImmutable('2024-12-31'));
         $contract->setTotalRooms(100);
         $contract->setTotalDays(365);
         $contract->setTotalAmount('100000.00');
@@ -132,7 +132,7 @@ class DailyInventoryRepositoryTest extends KernelTestCase
         $this->entityManager->persist($roomType);
         $this->entityManager->flush();
 
-        $inventory = $this->createTestDailyInventory($roomType, $hotel, new \DateTime('2024-01-01'));
+        $inventory = $this->createTestDailyInventory($roomType, $hotel, new \DateTimeImmutable('2024-01-01'));
 
         // Act
         $this->repository->save($inventory, true);
@@ -154,7 +154,7 @@ class DailyInventoryRepositoryTest extends KernelTestCase
         $this->entityManager->persist($roomType);
         $this->entityManager->flush();
 
-        $inventory = $this->createTestDailyInventory($roomType, $hotel, new \DateTime('2024-01-01'));
+        $inventory = $this->createTestDailyInventory($roomType, $hotel, new \DateTimeImmutable('2024-01-01'));
 
         // Act
         $this->repository->save($inventory, false);
@@ -172,7 +172,7 @@ class DailyInventoryRepositoryTest extends KernelTestCase
         // Arrange
         $hotel = $this->createTestHotel();
         $roomType = $this->createTestRoomType($hotel);
-        $inventory = $this->createTestDailyInventory($roomType, $hotel, new \DateTime('2024-01-01'));
+        $inventory = $this->createTestDailyInventory($roomType, $hotel, new \DateTimeImmutable('2024-01-01'));
         $this->entityManager->persist($hotel);
         $this->entityManager->persist($roomType);
         $this->entityManager->persist($inventory);
@@ -193,7 +193,7 @@ class DailyInventoryRepositoryTest extends KernelTestCase
         // Arrange
         $hotel = $this->createTestHotel();
         $roomType = $this->createTestRoomType($hotel);
-        $date = new \DateTime('2024-01-01');
+        $date = new \DateTimeImmutable('2024-01-01');
         $inventory = $this->createTestDailyInventory($roomType, $hotel, $date);
 
         $this->entityManager->persist($hotel);
@@ -231,7 +231,7 @@ class DailyInventoryRepositoryTest extends KernelTestCase
         $this->entityManager->flush();
 
         // Act
-        $foundInventory = $this->repository->findByRoomTypeAndDate($roomType->getId(), new \DateTime('2024-01-01'));
+        $foundInventory = $this->repository->findByRoomTypeAndDate($roomType->getId(), new \DateTimeImmutable('2024-01-01'));
 
         // Assert
         $this->assertNull($foundInventory);
@@ -245,10 +245,10 @@ class DailyInventoryRepositoryTest extends KernelTestCase
         $this->entityManager->persist($hotel);
         $this->entityManager->persist($roomType);
 
-        $availableInventory = $this->createTestDailyInventory($roomType, $hotel, new \DateTime('2024-01-01'), 'AVAILABLE-001');
+        $availableInventory = $this->createTestDailyInventory($roomType, $hotel, new \DateTimeImmutable('2024-01-01'), 'AVAILABLE-001');
         $availableInventory->setStatus(DailyInventoryStatusEnum::AVAILABLE);
 
-        $soldOutInventory = $this->createTestDailyInventory($roomType, $hotel, new \DateTime('2024-01-02'), 'SOLDOUT-001');
+        $soldOutInventory = $this->createTestDailyInventory($roomType, $hotel, new \DateTimeImmutable('2024-01-02'), 'SOLDOUT-001');
         $soldOutInventory->setStatus(DailyInventoryStatusEnum::SOLD);
 
         $this->entityManager->persist($availableInventory);
@@ -256,8 +256,8 @@ class DailyInventoryRepositoryTest extends KernelTestCase
         $this->entityManager->flush();
 
         // Act
-        $startDate = new \DateTime('2024-01-01');
-        $endDate = new \DateTime('2024-01-02');
+        $startDate = new \DateTimeImmutable('2024-01-01');
+        $endDate = new \DateTimeImmutable('2024-01-02');
         $availableInventories = $this->repository->findAvailableByDateRange($startDate, $endDate);
 
         // Assert
@@ -276,9 +276,9 @@ class DailyInventoryRepositoryTest extends KernelTestCase
         $this->entityManager->persist($roomType);
         $this->entityManager->persist($contract);
 
-        $inventory1 = $this->createTestDailyInventory($roomType, $hotel, new \DateTime('2024-01-01'), 'INV-001');
+        $inventory1 = $this->createTestDailyInventory($roomType, $hotel, new \DateTimeImmutable('2024-01-01'), 'INV-001');
         $inventory1->setContract($contract);
-        $inventory2 = $this->createTestDailyInventory($roomType, $hotel, new \DateTime('2024-01-02'), 'INV-002');
+        $inventory2 = $this->createTestDailyInventory($roomType, $hotel, new \DateTimeImmutable('2024-01-02'), 'INV-002');
         $inventory2->setContract($contract);
 
         $this->entityManager->persist($inventory1);
@@ -305,10 +305,10 @@ class DailyInventoryRepositoryTest extends KernelTestCase
         $this->entityManager->persist($roomType1);
         $this->entityManager->persist($roomType2);
 
-        $date = new \DateTime('2024-01-01');
+        $date = new \DateTimeImmutable('2024-01-01');
         $inventory1 = $this->createTestDailyInventory($roomType1, $hotel, $date, 'INV-001');
         $inventory2 = $this->createTestDailyInventory($roomType2, $hotel, $date, 'INV-002');
-        $inventory3 = $this->createTestDailyInventory($roomType1, $hotel, new \DateTime('2024-01-02'), 'INV-003');
+        $inventory3 = $this->createTestDailyInventory($roomType1, $hotel, new \DateTimeImmutable('2024-01-02'), 'INV-003');
 
         $this->entityManager->persist($inventory1);
         $this->entityManager->persist($inventory2);
@@ -334,9 +334,9 @@ class DailyInventoryRepositoryTest extends KernelTestCase
         $this->entityManager->persist($hotel);
         $this->entityManager->persist($roomType);
 
-        $inventory1 = $this->createTestDailyInventory($roomType, $hotel, new \DateTime('2024-01-02'), 'INV-002');
-        $inventory2 = $this->createTestDailyInventory($roomType, $hotel, new \DateTime('2024-01-01'), 'INV-001');
-        $inventory3 = $this->createTestDailyInventory($roomType, $hotel, new \DateTime('2024-01-03'), 'INV-003');
+        $inventory1 = $this->createTestDailyInventory($roomType, $hotel, new \DateTimeImmutable('2024-01-02'), 'INV-002');
+        $inventory2 = $this->createTestDailyInventory($roomType, $hotel, new \DateTimeImmutable('2024-01-01'), 'INV-001');
+        $inventory3 = $this->createTestDailyInventory($roomType, $hotel, new \DateTimeImmutable('2024-01-03'), 'INV-003');
 
         $this->entityManager->persist($inventory1);
         $this->entityManager->persist($inventory2);
@@ -362,13 +362,13 @@ class DailyInventoryRepositoryTest extends KernelTestCase
         $this->entityManager->persist($hotel);
         $this->entityManager->persist($roomType);
 
-        $availableInventory = $this->createTestDailyInventory($roomType, $hotel, new \DateTime('2024-01-01'), 'AVAILABLE-001');
+        $availableInventory = $this->createTestDailyInventory($roomType, $hotel, new \DateTimeImmutable('2024-01-01'), 'AVAILABLE-001');
         $availableInventory->setStatus(DailyInventoryStatusEnum::AVAILABLE);
 
-        $soldOutInventory = $this->createTestDailyInventory($roomType, $hotel, new \DateTime('2024-01-02'), 'SOLDOUT-001');
+        $soldOutInventory = $this->createTestDailyInventory($roomType, $hotel, new \DateTimeImmutable('2024-01-02'), 'SOLDOUT-001');
         $soldOutInventory->setStatus(DailyInventoryStatusEnum::SOLD);
 
-        $reservedInventory = $this->createTestDailyInventory($roomType, $hotel, new \DateTime('2024-01-03'), 'RESERVED-001');
+        $reservedInventory = $this->createTestDailyInventory($roomType, $hotel, new \DateTimeImmutable('2024-01-03'), 'RESERVED-001');
         $reservedInventory->setStatus(DailyInventoryStatusEnum::RESERVED);
 
         $this->entityManager->persist($availableInventory);
@@ -401,11 +401,11 @@ class DailyInventoryRepositoryTest extends KernelTestCase
         $this->entityManager->persist($contract);
 
         // 创建多个库存，但只有两种房型
-        $inventory1 = $this->createTestDailyInventory($roomType1, $hotel, new \DateTime('2024-01-01'), 'INV-001');
+        $inventory1 = $this->createTestDailyInventory($roomType1, $hotel, new \DateTimeImmutable('2024-01-01'), 'INV-001');
         $inventory1->setContract($contract);
-        $inventory2 = $this->createTestDailyInventory($roomType1, $hotel, new \DateTime('2024-01-02'), 'INV-002');
+        $inventory2 = $this->createTestDailyInventory($roomType1, $hotel, new \DateTimeImmutable('2024-01-02'), 'INV-002');
         $inventory2->setContract($contract);
-        $inventory3 = $this->createTestDailyInventory($roomType2, $hotel, new \DateTime('2024-01-01'), 'INV-003');
+        $inventory3 = $this->createTestDailyInventory($roomType2, $hotel, new \DateTimeImmutable('2024-01-01'), 'INV-003');
         $inventory3->setContract($contract);
 
         $this->entityManager->persist($inventory1);
@@ -432,18 +432,18 @@ class DailyInventoryRepositoryTest extends KernelTestCase
         $this->entityManager->persist($roomType);
         $this->entityManager->persist($contract);
 
-        $inventory1 = $this->createTestDailyInventory($roomType, $hotel, new \DateTime('2024-01-01'), 'INV-001');
+        $inventory1 = $this->createTestDailyInventory($roomType, $hotel, new \DateTimeImmutable('2024-01-01'), 'INV-001');
         $inventory1->setContract($contract);
         $inventory1->setCostPrice('100.00');
         $inventory1->setSellingPrice('200.00');
 
-        $inventory2 = $this->createTestDailyInventory($roomType, $hotel, new \DateTime('2024-01-02'), 'INV-002');
+        $inventory2 = $this->createTestDailyInventory($roomType, $hotel, new \DateTimeImmutable('2024-01-02'), 'INV-002');
         $inventory2->setContract($contract);
         $inventory2->setCostPrice('120.00');
         $inventory2->setSellingPrice('240.00');
 
         // 超出日期范围的库存（不应包含）
-        $inventory3 = $this->createTestDailyInventory($roomType, $hotel, new \DateTime('2024-02-01'), 'INV-003');
+        $inventory3 = $this->createTestDailyInventory($roomType, $hotel, new \DateTimeImmutable('2024-02-01'), 'INV-003');
         $inventory3->setContract($contract);
 
         $this->entityManager->persist($inventory1);
@@ -452,8 +452,8 @@ class DailyInventoryRepositoryTest extends KernelTestCase
         $this->entityManager->flush();
 
         // Act
-        $startDate = new \DateTime('2024-01-01');
-        $endDate = new \DateTime('2024-01-31');
+        $startDate = new \DateTimeImmutable('2024-01-01');
+        $endDate = new \DateTimeImmutable('2024-01-31');
         $priceData = $this->repository->findPriceDataByContractAndDateRange(
             $contract->getId(),
             $startDate,

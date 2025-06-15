@@ -216,7 +216,7 @@ class InventorySummaryServiceTest extends TestCase
      */
     public function testSyncInventorySummaryWithSpecificDate(): void
     {
-        $specificDate = new \DateTime('2024-01-15');
+        $specificDate = new \DateTimeImmutable('2024-01-15');
 
         // 模拟QueryBuilder
         $queryBuilder = $this->createMock(\Doctrine\ORM\QueryBuilder::class);
@@ -251,8 +251,8 @@ class InventorySummaryServiceTest extends TestCase
     {
         $hotel = $this->createMock(Hotel::class);
         $roomType = $this->createMock(RoomType::class);
-        $startDate = new \DateTime('2024-01-01');
-        $endDate = new \DateTime('2024-01-03');
+        $startDate = new \DateTimeImmutable('2024-01-01');
+        $endDate = new \DateTimeImmutable('2024-01-03');
 
         // 模拟第一天的查询和处理 - 第一次返回null创建新记录，后续返回existing记录
         $existingSummary = $this->createMock(InventorySummary::class);
@@ -298,7 +298,7 @@ class InventorySummaryServiceTest extends TestCase
     {
         $hotel = $this->createMock(Hotel::class);
         $roomType = $this->createMock(RoomType::class);
-        $date = new \DateTime('2024-01-15');
+        $date = new \DateTimeImmutable('2024-01-15');
 
         // 模拟不存在现有记录
         $this->inventorySummaryRepository->expects($this->once())
@@ -348,7 +348,7 @@ class InventorySummaryServiceTest extends TestCase
     {
         $hotel = $this->createMock(Hotel::class);
         $roomType = $this->createMock(RoomType::class);
-        $date = new \DateTime('2024-01-15');
+        $date = new \DateTimeImmutable('2024-01-15');
         $existingSummary = $this->createMock(InventorySummary::class);
 
         // 模拟存在现有记录
@@ -404,7 +404,7 @@ class InventorySummaryServiceTest extends TestCase
     {
         $hotel = $this->createMock(Hotel::class);
         $roomType = $this->createMock(RoomType::class);
-        $date = new \DateTime('2024-01-15');
+        $date = new \DateTimeImmutable('2024-01-15');
 
         $this->inventorySummaryRepository->method('findOneBy')->willReturn(null);
 
@@ -452,7 +452,7 @@ class InventorySummaryServiceTest extends TestCase
     {
         $hotel = $this->createMock(Hotel::class);
         $roomType = $this->createMock(RoomType::class);
-        $date = new \DateTime('2024-01-15');
+        $date = new \DateTimeImmutable('2024-01-15');
 
         $this->inventorySummaryRepository->method('findOneBy')->willReturn(null);
 

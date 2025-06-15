@@ -142,7 +142,7 @@ class InventoryWarningCommandTest extends TestCase
 
     public function test_execute_withSpecificDate(): void
     {
-        $specificDate = new \DateTime('2024-12-01');
+        $specificDate = new \DateTimeImmutable('2024-12-01');
 
         // Mock预警服务，验证传入了特定日期
         $this->warningService->expects($this->once())
@@ -166,7 +166,7 @@ class InventoryWarningCommandTest extends TestCase
 
     public function test_execute_withSyncAndSpecificDate(): void
     {
-        $specificDate = new \DateTime('2024-12-01');
+        $specificDate = new \DateTimeImmutable('2024-12-01');
 
         // Mock同步服务，验证传入了特定日期
         $this->summaryService->expects($this->once())

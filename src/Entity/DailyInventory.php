@@ -38,7 +38,7 @@ class DailyInventory implements Stringable
     #[ORM\JoinColumn(name: 'hotel_id', nullable: false)]
     private ?Hotel $hotel = null;
 
-    #[ORM\Column(type: Types::DATE_MUTABLE, options: ['comment' => '库存日期'])]
+    #[ORM\Column(type: Types::DATE_IMMUTABLE, options: ['comment' => '库存日期'])]
     private ?\DateTimeInterface $date = null;
 
     #[ORM\Column(type: Types::BOOLEAN, options: ['comment' => '是否为机动预留'])]
@@ -66,11 +66,11 @@ class DailyInventory implements Stringable
     private ?string $priceAdjustReason = null;
 
     #[CreateTimeColumn]
-    #[ORM\Column(type: Types::DATETIME_MUTABLE)]
+    #[ORM\Column(type: Types::DATETIME_IMMUTABLE)]
     private ?\DateTimeInterface $createTime = null;
 
     #[UpdateTimeColumn]
-    #[ORM\Column(type: Types::DATETIME_MUTABLE, nullable: true)]
+    #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
     private ?\DateTimeInterface $updateTime = null;
 
     #[UpdatedByColumn]

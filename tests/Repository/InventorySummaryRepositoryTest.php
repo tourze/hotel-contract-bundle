@@ -95,7 +95,7 @@ class InventorySummaryRepositoryTest extends KernelTestCase
     {
         $hotel = $this->createTestHotel();
         $roomType = $this->createTestRoomType('Standard Room', $hotel);
-        $date = new \DateTime('2024-01-15');
+        $date = new \DateTimeImmutable('2024-01-15');
 
         $summary = $this->createTestSummary();
         $summary->setHotel($hotel);
@@ -120,7 +120,7 @@ class InventorySummaryRepositoryTest extends KernelTestCase
         $foundSummary = $this->repository->findByHotelRoomTypeAndDate(
             999999,
             999999,
-            new \DateTime('2024-01-15')
+            new \DateTimeImmutable('2024-01-15')
         );
 
         $this->assertNull($foundSummary);
@@ -129,21 +129,21 @@ class InventorySummaryRepositoryTest extends KernelTestCase
     public function test_findByDateRange_returnsOrderedByDate(): void
     {
         $summary1 = $this->createTestSummary();
-        $summary1->setDate(new \DateTime('2024-01-01'));
+        $summary1->setDate(new \DateTimeImmutable('2024-01-01'));
 
         $summary2 = $this->createTestSummary();
-        $summary2->setDate(new \DateTime('2024-01-03'));
+        $summary2->setDate(new \DateTimeImmutable('2024-01-03'));
 
         $summary3 = $this->createTestSummary();
-        $summary3->setDate(new \DateTime('2024-01-02'));
+        $summary3->setDate(new \DateTimeImmutable('2024-01-02'));
 
         $this->repository->save($summary1, false);
         $this->repository->save($summary2, false);
         $this->repository->save($summary3, true);
 
         $results = $this->repository->findByDateRange(
-            new \DateTime('2024-01-01'),
-            new \DateTime('2024-01-31')
+            new \DateTimeImmutable('2024-01-01'),
+            new \DateTimeImmutable('2024-01-31')
         );
 
         $this->assertCount(3, $results);
@@ -155,12 +155,12 @@ class InventorySummaryRepositoryTest extends KernelTestCase
     public function test_findByDateRange_withNoMatchingDates_returnsEmptyArray(): void
     {
         $summary = $this->createTestSummary();
-        $summary->setDate(new \DateTime('2024-06-01'));
+        $summary->setDate(new \DateTimeImmutable('2024-06-01'));
         $this->repository->save($summary, true);
 
         $results = $this->repository->findByDateRange(
-            new \DateTime('2024-01-01'),
-            new \DateTime('2024-01-31')
+            new \DateTimeImmutable('2024-01-01'),
+            new \DateTimeImmutable('2024-01-31')
         );
 
         $this->assertIsArray($results);
@@ -209,8 +209,8 @@ class InventorySummaryRepositoryTest extends KernelTestCase
 
     public function test_findByDate_returnsAllSummariesForDate(): void
     {
-        $targetDate = new \DateTime('2024-01-15');
-        $otherDate = new \DateTime('2024-01-16');
+        $targetDate = new \DateTimeImmutable('2024-01-15');
+        $otherDate = new \DateTimeImmutable('2024-01-16');
 
         $summary1 = $this->createTestSummary();
         $summary1->setDate($targetDate);
@@ -344,8 +344,8 @@ class InventorySummaryRepositoryTest extends KernelTestCase
         $contract->setContractNo($contractNo);
         $contract->setHotel($hotel);
         $contract->setContractType(ContractTypeEnum::FIXED_PRICE);
-        $contract->setStartDate(new \DateTime('2024-01-01'));
-        $contract->setEndDate(new \DateTime('2024-12-31'));
+        $contract->setStartDate(new \DateTimeImmutable('2024-01-01'));
+        $contract->setEndDate(new \DateTimeImmutable('2024-12-31'));
         $contract->setTotalRooms(20);
         $contract->setTotalDays(365);
         $contract->setTotalAmount('100000.00');
@@ -366,7 +366,7 @@ class InventorySummaryRepositoryTest extends KernelTestCase
         $summary = new InventorySummary();
         $summary->setHotel($hotel);
         $summary->setRoomType($roomType);
-        $summary->setDate(new \DateTime('2024-01-01'));
+        $summary->setDate(new \DateTimeImmutable('2024-01-01'));
         $summary->setTotalRooms(10);
         $summary->setAvailableRooms(8);
         $summary->setReservedRooms(1);

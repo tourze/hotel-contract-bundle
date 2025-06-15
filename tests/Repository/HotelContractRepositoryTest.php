@@ -72,8 +72,8 @@ class HotelContractRepositoryTest extends KernelTestCase
         $contract->setContractNo($contractNo);
         $contract->setHotel($hotel);
         $contract->setContractType(ContractTypeEnum::FIXED_PRICE);
-        $contract->setStartDate(new \DateTime('2024-01-01'));
-        $contract->setEndDate(new \DateTime('2024-12-31'));
+        $contract->setStartDate(new \DateTimeImmutable('2024-01-01'));
+        $contract->setEndDate(new \DateTimeImmutable('2024-12-31'));
         $contract->setTotalRooms(100);
         $contract->setTotalDays(365);
         $contract->setTotalAmount('100000.00');
@@ -237,28 +237,28 @@ class HotelContractRepositoryTest extends KernelTestCase
 
         // 2024年全年合同
         $yearContract = $this->createTestContract($hotel, 'YEAR-2024');
-        $yearContract->setStartDate(new \DateTime('2024-01-01'));
-        $yearContract->setEndDate(new \DateTime('2024-12-31'));
+        $yearContract->setStartDate(new \DateTimeImmutable('2024-01-01'));
+        $yearContract->setEndDate(new \DateTimeImmutable('2024-12-31'));
         $yearContract->setStatus(ContractStatusEnum::ACTIVE);
         $yearContract->setPriority(2);
 
         // 2024年Q1合同
         $q1Contract = $this->createTestContract($hotel, 'Q1-2024');
-        $q1Contract->setStartDate(new \DateTime('2024-01-01'));
-        $q1Contract->setEndDate(new \DateTime('2024-03-31'));
+        $q1Contract->setStartDate(new \DateTimeImmutable('2024-01-01'));
+        $q1Contract->setEndDate(new \DateTimeImmutable('2024-03-31'));
         $q1Contract->setStatus(ContractStatusEnum::ACTIVE);
         $q1Contract->setPriority(1);
 
         // 2023年合同（不在范围内）
         $oldContract = $this->createTestContract($hotel, 'YEAR-2023');
-        $oldContract->setStartDate(new \DateTime('2023-01-01'));
-        $oldContract->setEndDate(new \DateTime('2023-12-31'));
+        $oldContract->setStartDate(new \DateTimeImmutable('2023-01-01'));
+        $oldContract->setEndDate(new \DateTimeImmutable('2023-12-31'));
         $oldContract->setStatus(ContractStatusEnum::ACTIVE);
 
         // 待审批状态合同（不应包含）
         $pendingContract = $this->createTestContract($hotel, 'PENDING-2024');
-        $pendingContract->setStartDate(new \DateTime('2024-01-01'));
-        $pendingContract->setEndDate(new \DateTime('2024-12-31'));
+        $pendingContract->setStartDate(new \DateTimeImmutable('2024-01-01'));
+        $pendingContract->setEndDate(new \DateTimeImmutable('2024-12-31'));
         $pendingContract->setStatus(ContractStatusEnum::PENDING);
 
         $this->entityManager->persist($yearContract);
@@ -268,8 +268,8 @@ class HotelContractRepositoryTest extends KernelTestCase
         $this->entityManager->flush();
 
         // Act - 查询2024年Q2范围
-        $startDate = new \DateTime('2024-04-01');
-        $endDate = new \DateTime('2024-06-30');
+        $startDate = new \DateTimeImmutable('2024-04-01');
+        $endDate = new \DateTimeImmutable('2024-06-30');
         $contracts = $this->repository->findContractsInDateRange($startDate, $endDate);
 
         // Assert
@@ -284,14 +284,14 @@ class HotelContractRepositoryTest extends KernelTestCase
         $this->entityManager->persist($hotel);
 
         $lowPriorityContract = $this->createTestContract($hotel, 'LOW-PRIORITY');
-        $lowPriorityContract->setStartDate(new \DateTime('2024-01-01'));
-        $lowPriorityContract->setEndDate(new \DateTime('2024-12-31'));
+        $lowPriorityContract->setStartDate(new \DateTimeImmutable('2024-01-01'));
+        $lowPriorityContract->setEndDate(new \DateTimeImmutable('2024-12-31'));
         $lowPriorityContract->setStatus(ContractStatusEnum::ACTIVE);
         $lowPriorityContract->setPriority(1);
 
         $highPriorityContract = $this->createTestContract($hotel, 'HIGH-PRIORITY');
-        $highPriorityContract->setStartDate(new \DateTime('2024-01-01'));
-        $highPriorityContract->setEndDate(new \DateTime('2024-12-31'));
+        $highPriorityContract->setStartDate(new \DateTimeImmutable('2024-01-01'));
+        $highPriorityContract->setEndDate(new \DateTimeImmutable('2024-12-31'));
         $highPriorityContract->setStatus(ContractStatusEnum::ACTIVE);
         $highPriorityContract->setPriority(5);
 
@@ -300,8 +300,8 @@ class HotelContractRepositoryTest extends KernelTestCase
         $this->entityManager->flush();
 
         // Act
-        $startDate = new \DateTime('2024-06-01');
-        $endDate = new \DateTime('2024-06-30');
+        $startDate = new \DateTimeImmutable('2024-06-01');
+        $endDate = new \DateTimeImmutable('2024-06-30');
         $contracts = $this->repository->findContractsInDateRange($startDate, $endDate);
 
         // Assert
@@ -316,15 +316,15 @@ class HotelContractRepositoryTest extends KernelTestCase
         // Arrange
         $hotel = $this->createTestHotel();
         $contract = $this->createTestContract($hotel);
-        $contract->setStartDate(new \DateTime('2023-01-01'));
-        $contract->setEndDate(new \DateTime('2023-12-31'));
+        $contract->setStartDate(new \DateTimeImmutable('2023-01-01'));
+        $contract->setEndDate(new \DateTimeImmutable('2023-12-31'));
         $this->entityManager->persist($hotel);
         $this->entityManager->persist($contract);
         $this->entityManager->flush();
 
         // Act - 查询2024年
-        $startDate = new \DateTime('2024-01-01');
-        $endDate = new \DateTime('2024-12-31');
+        $startDate = new \DateTimeImmutable('2024-01-01');
+        $endDate = new \DateTimeImmutable('2024-12-31');
         $contracts = $this->repository->findContractsInDateRange($startDate, $endDate);
 
         // Assert

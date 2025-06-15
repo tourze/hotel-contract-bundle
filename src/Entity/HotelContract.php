@@ -37,10 +37,10 @@ class HotelContract implements Stringable
     #[ORM\Column(type: Types::STRING, length: 20, enumType: ContractTypeEnum::class, options: ['comment' => '合同类型'])]
     private ContractTypeEnum $contractType = ContractTypeEnum::FIXED_PRICE;
 
-    #[ORM\Column(type: Types::DATE_MUTABLE, options: ['comment' => '合同开始日期'])]
+    #[ORM\Column(type: Types::DATE_IMMUTABLE, options: ['comment' => '合同开始日期'])]
     private ?\DateTimeInterface $startDate = null;
 
-    #[ORM\Column(type: Types::DATE_MUTABLE, options: ['comment' => '合同结束日期'])]
+    #[ORM\Column(type: Types::DATE_IMMUTABLE, options: ['comment' => '合同结束日期'])]
     private ?\DateTimeInterface $endDate = null;
 
     #[ORM\Column(type: Types::INTEGER, options: ['comment' => '合同总房间数'])]
@@ -68,11 +68,11 @@ class HotelContract implements Stringable
     private int $priority = 0;
 
     #[CreateTimeColumn]
-    #[ORM\Column(type: Types::DATETIME_MUTABLE)]
+    #[ORM\Column(type: Types::DATETIME_IMMUTABLE)]
     private ?\DateTimeInterface $createTime = null;
 
     #[UpdateTimeColumn]
-    #[ORM\Column(type: Types::DATETIME_MUTABLE, nullable: true)]
+    #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
     private ?\DateTimeInterface $updateTime = null;
 
     #[CreatedByColumn]

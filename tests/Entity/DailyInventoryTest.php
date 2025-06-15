@@ -83,7 +83,7 @@ class DailyInventoryTest extends TestCase
 
     public function test_setDate_returnsInstance_withValidDate(): void
     {
-        $date = new \DateTime('2024-01-01');
+        $date = new \DateTimeImmutable('2024-01-01');
         $result = $this->inventory->setDate($date);
         
         $this->assertSame($this->inventory, $result);
@@ -257,7 +257,7 @@ class DailyInventoryTest extends TestCase
 
     public function test_setCreateTime_setsValue_withValidDateTime(): void
     {
-        $dateTime = new \DateTime('2024-01-01 10:00:00');
+        $dateTime = new \DateTimeImmutable('2024-01-01 10:00:00');
         $this->inventory->setCreateTime($dateTime);
         
         $this->assertSame($dateTime, $this->inventory->getCreateTime());
@@ -265,7 +265,7 @@ class DailyInventoryTest extends TestCase
 
     public function test_setUpdateTime_setsValue_withValidDateTime(): void
     {
-        $dateTime = new \DateTime('2024-01-01 10:00:00');
+        $dateTime = new \DateTimeImmutable('2024-01-01 10:00:00');
         $this->inventory->setUpdateTime($dateTime);
         
         $this->assertSame($dateTime, $this->inventory->getUpdateTime());
@@ -310,7 +310,7 @@ class DailyInventoryTest extends TestCase
         
         $this->inventory->setRoomType($roomType);
         $this->inventory->setCode('INV-001');
-        $this->inventory->setDate(new \DateTime('2024-01-01'));
+        $this->inventory->setDate(new \DateTimeImmutable('2024-01-01'));
         
         $expected = 'Deluxe Room - INV-001 - 2024-01-01';
         $this->assertSame($expected, (string)$this->inventory);
@@ -319,7 +319,7 @@ class DailyInventoryTest extends TestCase
     public function test_toString_handlesNullRoomType(): void
     {
         $this->inventory->setCode('INV-001');
-        $this->inventory->setDate(new \DateTime('2024-01-01'));
+        $this->inventory->setDate(new \DateTimeImmutable('2024-01-01'));
         
         $expected = 'Unknown - INV-001 - 2024-01-01';
         $this->assertSame($expected, (string)$this->inventory);
@@ -343,7 +343,7 @@ class DailyInventoryTest extends TestCase
         $roomType->method('getName')->willReturn('Deluxe Room');
         
         $this->inventory->setRoomType($roomType);
-        $this->inventory->setDate(new \DateTime('2024-01-01'));
+        $this->inventory->setDate(new \DateTimeImmutable('2024-01-01'));
         
         $expected = 'Deluxe Room -  - 2024-01-01';
         $this->assertSame($expected, (string)$this->inventory);
