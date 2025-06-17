@@ -228,7 +228,7 @@ class InventorySummaryCrudController extends AbstractCrudController
             $dateFilter = $filters['date'];
             if (isset($dateFilter['comparison']) && isset($dateFilter['value'])) {
                 $comparison = $dateFilter['comparison'];
-                $value = new \DateTime($dateFilter['value']);
+                $value = new \DateTimeImmutable($dateFilter['value']);
 
                 switch ($comparison) {
                     case '>':
@@ -317,7 +317,7 @@ class InventorySummaryCrudController extends AbstractCrudController
         $response = new BinaryFileResponse($tempFile);
         $response->setContentDisposition(
             ResponseHeaderBag::DISPOSITION_ATTACHMENT,
-            'inventory_summary_' . (new \DateTime())->format('Ymd_His') . '.csv'
+            'inventory_summary_' . (new \DateTimeImmutable())->format('Ymd_His') . '.csv'
         );
 
         // 请求结束后删除临时文件

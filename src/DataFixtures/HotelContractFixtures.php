@@ -33,8 +33,8 @@ class HotelContractFixtures extends Fixture implements DependentFixtureInterface
             [
                 [
                     'contractType' => ContractTypeEnum::FIXED_PRICE,
-                    'startDate' => new \DateTime('first day of this month'),
-                    'endDate' => (new \DateTime('first day of next month'))->modify('+2 months'),
+                    'startDate' => new \DateTimeImmutable('first day of this month'),
+                    'endDate' => (new \DateTimeImmutable('first day of next month'))->modify('+2 months'),
                     'totalRooms' => 17,
                     'totalDays' => 7,
                     'totalAmount' => '500000.00',
@@ -44,8 +44,8 @@ class HotelContractFixtures extends Fixture implements DependentFixtureInterface
                 ],
                 [
                     'contractType' => ContractTypeEnum::DYNAMIC_PRICE,
-                    'startDate' => new \DateTime('first day of next month'),
-                    'endDate' => (new \DateTime('first day of next month'))->modify('+3 months'),
+                    'startDate' => new \DateTimeImmutable('first day of next month'),
+                    'endDate' => (new \DateTimeImmutable('first day of next month'))->modify('+3 months'),
                     'totalRooms' => 20,
                     'totalDays' => 7,
                     'totalAmount' => '300000.00',
@@ -55,8 +55,8 @@ class HotelContractFixtures extends Fixture implements DependentFixtureInterface
                 ],
                 [
                     'contractType' => ContractTypeEnum::FIXED_PRICE,
-                    'startDate' => (new \DateTime())->modify('-2 months'),
-                    'endDate' => (new \DateTime()),
+                    'startDate' => (new \DateTimeImmutable())->modify('-2 months'),
+                    'endDate' => (new \DateTimeImmutable()),
                     'totalRooms' => 20,
                     'totalDays' => 7,
                     'totalAmount' => '350000.00',
@@ -77,8 +77,8 @@ class HotelContractFixtures extends Fixture implements DependentFixtureInterface
             [
                 [
                     'contractType' => ContractTypeEnum::DYNAMIC_PRICE,
-                    'startDate' => new \DateTime('first day of this month'),
-                    'endDate' => (new \DateTime('first day of next month'))->modify('+5 months'),
+                    'startDate' => new \DateTimeImmutable('first day of this month'),
+                    'endDate' => (new \DateTimeImmutable('first day of next month'))->modify('+5 months'),
                     'totalRooms' => 18,
                     'totalDays' => 7,
                     'totalAmount' => '420000.00',
@@ -88,8 +88,8 @@ class HotelContractFixtures extends Fixture implements DependentFixtureInterface
                 ],
                 [
                     'contractType' => ContractTypeEnum::FIXED_PRICE,
-                    'startDate' => (new \DateTime())->modify('-1 months'),
-                    'endDate' => (new \DateTime())->modify('+1 months'),
+                    'startDate' => (new \DateTimeImmutable())->modify('-1 months'),
+                    'endDate' => (new \DateTimeImmutable())->modify('+1 months'),
                     'totalRooms' => 20,
                     'totalDays' => 7,
                     'totalAmount' => '150000.00',
@@ -109,8 +109,8 @@ class HotelContractFixtures extends Fixture implements DependentFixtureInterface
             [
                 [
                     'contractType' => ContractTypeEnum::FIXED_PRICE,
-                    'startDate' => new \DateTime('first day of this month'),
-                    'endDate' => (new \DateTime('first day of next month'))->modify('+6 months'),
+                    'startDate' => new \DateTimeImmutable('first day of this month'),
+                    'endDate' => (new \DateTimeImmutable('first day of next month'))->modify('+6 months'),
                     'totalRooms' => 25,
                     'totalDays' => 7,
                     'totalAmount' => '250000.00',
@@ -132,8 +132,8 @@ class HotelContractFixtures extends Fixture implements DependentFixtureInterface
 
             $hotel = $this->getReference(HotelFixtures::HOTEL_REFERENCE_PREFIX . $i, Hotel::class);
             $contractType = $i % 2 == 0 ? ContractTypeEnum::FIXED_PRICE : ContractTypeEnum::DYNAMIC_PRICE;
-            $startDate = new \DateTime('first day of this month');
-            $endDate = (new \DateTime('first day of next month'))->modify('+' . rand(1, 6) . ' months');
+            $startDate = new \DateTimeImmutable('first day of this month');
+            $endDate = (new \DateTimeImmutable('first day of next month'))->modify('+' . rand(1, 6) . ' months');
             $totalDays = 7; // 固定为7天
             $totalRooms = rand(10, 25); // 房间数在10-25之间
 

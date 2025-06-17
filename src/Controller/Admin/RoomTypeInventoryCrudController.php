@@ -273,8 +273,8 @@ class RoomTypeInventoryCrudController extends AbstractCrudController
         }
 
         try {
-            $startDateTime = new \DateTime($startDate);
-            $endDateTime = new \DateTime($endDate);
+            $startDateTime = new \DateTimeImmutable($startDate);
+            $endDateTime = new \DateTimeImmutable($endDate);
 
             $result = $this->roomTypeInventoryService->oneClickGenerateRoomTypeInventory(
                 $contractId,
@@ -320,8 +320,8 @@ class RoomTypeInventoryCrudController extends AbstractCrudController
     {
         // 获取参数
         $days = $request->request->getInt('days', 30);
-        $startDate = new \DateTime();
-        $endDate = (new \DateTime())->modify('+' . $days . ' days');
+        $startDate = new \DateTimeImmutable();
+        $endDate = (new \DateTimeImmutable())->modify('+' . $days . ' days');
 
         // 开始事务
         $em->getConnection()->beginTransaction();

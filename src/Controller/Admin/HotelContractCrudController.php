@@ -357,8 +357,8 @@ class HotelContractCrudController extends AbstractCrudController
         assert($contract instanceof HotelContract);
 
         // 获取合同库存统计
-        $startDate = new \DateTime();
-        $endDate = (new \DateTime())->modify('+30 days'); // 统计未来30天的库存
+        $startDate = new \DateTimeImmutable();
+        $endDate = (new \DateTimeImmutable())->modify('+30 days'); // 统计未来30天的库存
 
         // 按房型统计库存情况
         $inventoryStats = $this->dailyInventoryRepository

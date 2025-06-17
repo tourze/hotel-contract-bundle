@@ -32,8 +32,8 @@ class InventoryQueryService
         }
 
         // 获取日期范围内的库存信息
-        $startDate = new \DateTime($checkInDate);
-        $endDate = new \DateTime($checkOutDate);
+        $startDate = new \DateTimeImmutable($checkInDate);
+        $endDate = new \DateTimeImmutable($checkOutDate);
 
         $inventoryData = [];
         $currentDate = clone $startDate;

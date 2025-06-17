@@ -139,7 +139,7 @@ class RoomTypeInventoryService
                 $currentDate->modify('+1 day');
             } else {
                 // 如果不是DateTime实例，创建一个新的
-                $nextDate = new \DateTime($currentDate->format('Y-m-d'));
+                $nextDate = new \DateTimeImmutable($currentDate->format('Y-m-d'));
                 $nextDate->modify('+1 day');
                 $currentDate = $nextDate;
             }
@@ -205,7 +205,7 @@ class RoomTypeInventoryService
                 $currentDate->modify('+1 day');
             } else {
                 // 如果不是DateTime实例，创建一个新的
-                $nextDate = new \DateTime($currentDate->format('Y-m-d'));
+                $nextDate = new \DateTimeImmutable($currentDate->format('Y-m-d'));
                 $nextDate->modify('+1 day');
                 $currentDate = $nextDate;
             }
@@ -252,7 +252,7 @@ class RoomTypeInventoryService
                 $currentDate->modify('+1 day');
             } else {
                 // 如果不是DateTime实例，创建一个新的
-                $nextDate = new \DateTime($currentDate->format('Y-m-d'));
+                $nextDate = new \DateTimeImmutable($currentDate->format('Y-m-d'));
                 $nextDate->modify('+1 day');
                 $currentDate = $nextDate;
             }

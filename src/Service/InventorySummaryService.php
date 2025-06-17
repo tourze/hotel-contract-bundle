@@ -76,7 +76,7 @@ class InventorySummaryService
                 $summary = new InventorySummary();
                 $summary->setHotel($hotel)
                     ->setRoomType($roomType)
-                    ->setDate(new \DateTime($result['date']));
+                    ->setDate(new \DateTimeImmutable($result['date']));
                 $createdCount++;
             } else {
                 $updatedCount++;
@@ -157,8 +157,8 @@ class InventorySummaryService
 
         while ($currentDate <= $endDateCopy) {
             $this->updateDailyInventorySummary($hotel, $roomType, clone $currentDate);
-            $currentDate = new \DateTime($currentDate->format('Y-m-d'));
-            $currentDate->modify('+1 day');
+            $currentDate = new \DateTimeImmutable($currentDate->format('Y-m-d'));
+            $currentDate = $currentDate->modify('+1 day');
         }
     }
 

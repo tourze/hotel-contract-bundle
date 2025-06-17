@@ -148,7 +148,7 @@ class InventoryWarningCommandTest extends TestCase
         $this->warningService->expects($this->once())
             ->method('checkAndSendWarnings')
             ->with($this->callback(function ($date) use ($specificDate) {
-                return $date instanceof \DateTime &&
+                return $date instanceof \DateTimeImmutable &&
                     $date->format('Y-m-d') === $specificDate->format('Y-m-d');
             }))
             ->willReturn([
@@ -172,7 +172,7 @@ class InventoryWarningCommandTest extends TestCase
         $this->summaryService->expects($this->once())
             ->method('syncInventorySummary')
             ->with($this->callback(function ($date) use ($specificDate) {
-                return $date instanceof \DateTime &&
+                return $date instanceof \DateTimeImmutable &&
                     $date->format('Y-m-d') === $specificDate->format('Y-m-d');
             }))
             ->willReturn([
@@ -184,7 +184,7 @@ class InventoryWarningCommandTest extends TestCase
         $this->warningService->expects($this->once())
             ->method('checkAndSendWarnings')
             ->with($this->callback(function ($date) use ($specificDate) {
-                return $date instanceof \DateTime &&
+                return $date instanceof \DateTimeImmutable &&
                     $date->format('Y-m-d') === $specificDate->format('Y-m-d');
             }))
             ->willReturn([

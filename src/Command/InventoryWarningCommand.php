@@ -40,7 +40,7 @@ class InventoryWarningCommand extends Command
         $date = null;
         if ($dateStr = $input->getOption('date')) {
             try {
-                $date = new \DateTime($dateStr);
+                $date = new \DateTimeImmutable($dateStr);
                 $io->note(sprintf('检查特定日期: %s', $date->format('Y-m-d')));
             } catch (\Throwable $e) {
                 $io->error(sprintf('日期格式错误: %s', $dateStr));

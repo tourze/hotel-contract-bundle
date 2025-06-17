@@ -39,7 +39,7 @@ class PriceManagementService
 
         // 解析年月
         list($year, $monthNum) = explode('-', $month);
-        $startDate = new \DateTime("$year-$monthNum-01");
+        $startDate = new \DateTimeImmutable("$year-$monthNum-01");
         $endDate = clone $startDate;
         $endDate->modify('last day of this month');
 
@@ -130,7 +130,7 @@ class PriceManagementService
 
         // 解析年月
         list($year, $monthNum) = explode('-', $month);
-        $startDate = new \DateTime("$year-$monthNum-01");
+        $startDate = new \DateTimeImmutable("$year-$monthNum-01");
         $endDate = clone $startDate;
         $endDate->modify('last day of this month');
 
@@ -238,8 +238,8 @@ class PriceManagementService
             $adjustmentParams = [
                 'hotel' => $hotel,
                 'room_type' => $roomType,
-                'start_date' => new \DateTime($params['start_date']),
-                'end_date' => new \DateTime($params['end_date']),
+                'start_date' => new \DateTimeImmutable($params['start_date']),
+                'end_date' => new \DateTimeImmutable($params['end_date']),
                 'price_type' => $params['price_type'],
                 'adjust_method' => $params['adjust_method'],
                 'day_filter' => $params['day_filter'],
@@ -281,7 +281,7 @@ class PriceManagementService
     {
         try {
             $roomType = $this->roomTypeRepository->find($params['room_type_id']);
-            $date = new \DateTime($params['date']);
+            $date = new \DateTimeImmutable($params['date']);
             $priceType = $params['price_type'] ?? 'cost_price';
             $adjustMethod = $params['adjust_method'];
 

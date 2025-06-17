@@ -57,7 +57,7 @@ class InventoryWarningService
             $endDate = clone $date;
         } else {
             // 默认检查从今天开始的90天内的库存
-            $startDate = new \DateTime();
+            $startDate = new \DateTimeImmutable();
             $endDate = clone $startDate;
             $endDate->modify('+90 days');
         }

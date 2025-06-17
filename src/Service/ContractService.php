@@ -24,7 +24,7 @@ class ContractService
      */
     public function generateContractNumber(): string
     {
-        $today = new \DateTime();
+        $today = new \DateTimeImmutable();
         $datePrefix = 'HT' . $today->format('Ymd');
 
         // 查询今天已有的合同数量
