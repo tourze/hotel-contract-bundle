@@ -41,7 +41,7 @@ class InventoryQueryService
         while ($currentDate < $endDate) {
             $dayData = $this->getDayInventoryData($roomType, $currentDate, $roomCount);
             $inventoryData[] = $dayData;
-            $currentDate->modify('+1 day');
+            $currentDate = $currentDate->modify('+1 day');
         }
 
         // 检查是否所有日期都有足够库存且有价格
@@ -60,7 +60,7 @@ class InventoryQueryService
     /**
      * 获取单日库存数据
      */
-    private function getDayInventoryData(RoomType $roomType, \DateTime $date, int $roomCount): array
+    private function getDayInventoryData(RoomType $roomType, \DateTimeInterface $date, int $roomCount): array
     {
         $dateStr = $date->format('Y-m-d');
         $conn = $this->entityManager->getConnection();

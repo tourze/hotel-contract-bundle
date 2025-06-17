@@ -41,7 +41,7 @@ class PriceManagementService
         list($year, $monthNum) = explode('-', $month);
         $startDate = new \DateTimeImmutable("$year-$monthNum-01");
         $endDate = clone $startDate;
-        $endDate->modify('last day of this month');
+        $endDate = $endDate->modify('last day of this month');
 
         $calendarData = [];
         $roomTypes = [];
@@ -132,7 +132,7 @@ class PriceManagementService
         list($year, $monthNum) = explode('-', $month);
         $startDate = new \DateTimeImmutable("$year-$monthNum-01");
         $endDate = clone $startDate;
-        $endDate->modify('last day of this month');
+        $endDate = $endDate->modify('last day of this month');
 
         $calendarData = [];
 
@@ -302,7 +302,7 @@ class PriceManagementService
             $updateCount = 0;
 
             foreach ($inventories as $inventory) {
-                $currentPrice = $priceType === 'cost_price' ? $inventory->getCostPrice() : $inventory->getSellingPrice();
+                $currentPrice = (float) ($priceType === 'cost_price' ? $inventory->getCostPrice() : $inventory->getSellingPrice());
                 $newPrice = 0;
 
                 // 根据调整方式计算新价格
@@ -321,7 +321,7 @@ class PriceManagementService
                         break;
                     case 'profit_rate':
                         if ($priceType === 'selling_price' && isset($params['profit_rate'])) {
-                            $costPrice = $inventory->getCostPrice();
+                            $costPrice = (float) $inventory->getCostPrice();
                             $newPrice = $costPrice * (1 + $params['profit_rate'] / 100);
                         }
                         break;
@@ -367,7 +367,7 @@ class PriceManagementService
     /**
      * 组织合同价格日历数据
      */
-    private function organizeCalendarData(\DateTime $startDate, \DateTime $endDate, array $roomTypes, array $priceData): array
+    private function organizeCalendarData(\DateTimeInterface $startDate, \DateTimeInterface $endDate, array $roomTypes, array $priceData): array
     {
         $calendarData = [];
         $currentDate = clone $startDate;
@@ -429,7 +429,7 @@ class PriceManagementService
     /**
      * 组织销售价格日历数据
      */
-    private function organizeSellingPriceData(\DateTime $startDate, \DateTime $endDate, array $roomTypes, array $inventories): array
+    private function organizeSellingPriceData(\DateTimeInterface $startDate, \DateTimeInterface $endDate, array $roomTypes, array $inventories): array
     {
         $calendarData = [];
         $currentDate = clone $startDate;

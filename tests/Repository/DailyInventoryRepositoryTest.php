@@ -39,7 +39,9 @@ class DailyInventoryRepositoryTest extends KernelTestCase
     {
         self::bootKernel();
         $this->entityManager = static::getContainer()->get(EntityManagerInterface::class);
-        $this->repository = $this->entityManager->getRepository(DailyInventory::class);
+        /** @var DailyInventoryRepository $repository */
+        $repository = $this->entityManager->getRepository(DailyInventory::class);
+        $this->repository = $repository;
         $this->cleanDatabase();
     }
 

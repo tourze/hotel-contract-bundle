@@ -45,10 +45,8 @@ class InventoryUpdateService
             ->setParameter('startDate', $startDate)
             ->setParameter('endDate', $endDate);
 
-        if ($hotel) {
-            $qb->andWhere('di.hotel = :hotel')
-                ->setParameter('hotel', $hotel);
-        }
+        $qb->andWhere('di.hotel = :hotel')
+            ->setParameter('hotel', $hotel);
 
         if ($roomType) {
             $qb->andWhere('di.roomType = :roomType')
@@ -125,10 +123,7 @@ class InventoryUpdateService
 
         // 构建查询条件
         $criteria = [];
-
-        if ($hotel) {
-            $criteria['di.hotel'] = $hotel;
-        }
+        $criteria['di.hotel'] = $hotel;
 
         if ($roomType) {
             $criteria['di.roomType'] = $roomType;

@@ -59,7 +59,7 @@ class InventoryWarningService
             // 默认检查从今天开始的90天内的库存
             $startDate = new \DateTimeImmutable();
             $endDate = clone $startDate;
-            $endDate->modify('+90 days');
+            $endDate = $endDate->modify('+90 days');
         }
 
         // 查询库存预警状态的记录

@@ -6,8 +6,7 @@ use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 use Stringable;
 use Symfony\Component\Validator\Constraints as Assert;
-use Tourze\DoctrineTimestampBundle\Attribute\CreateTimeColumn;
-use Tourze\DoctrineTimestampBundle\Attribute\UpdateTimeColumn;
+use Tourze\DoctrineTimestampBundle\Traits\TimestampableAware;
 use Tourze\DoctrineUserBundle\Attribute\UpdatedByColumn;
 use Tourze\HotelContractBundle\Enum\DailyInventoryStatusEnum;
 use Tourze\HotelContractBundle\Repository\DailyInventoryRepository;
@@ -22,6 +21,7 @@ use Tourze\HotelProfileBundle\Entity\RoomType;
 #[ORM\Index(name: 'daily_inventory_idx_date_status', columns: ['date', 'status'])]
 class DailyInventory implements Stringable
 {
+    use TimestampableAware;
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column(type: Types::BIGINT)]
@@ -65,13 +65,6 @@ class DailyInventory implements Stringable
     #[ORM\Column(type: Types::STRING, length: 255, nullable: true, options: ['comment' => '价格调整原因'])]
     private ?string $priceAdjustReason = null;
 
-    #[CreateTimeColumn]
-    #[ORM\Column(type: Types::DATETIME_IMMUTABLE)]
-    private ?\DateTimeInterface $createTime = null;
-
-    #[UpdateTimeColumn]
-    #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
-    private ?\DateTimeInterface $updateTime = null;
 
     #[UpdatedByColumn]
     #[ORM\Column(type: Types::STRING, nullable: true)]
@@ -212,15 +205,6 @@ class DailyInventory implements Stringable
         return $this;
     }
 
-    public function getCreateTime(): ?\DateTimeInterface
-    {
-        return $this->createTime;
-    }
-
-    public function getUpdateTime(): ?\DateTimeInterface
-    {
-        return $this->updateTime;
-    }
 
     public function getLastModifiedBy(): ?string
     {
@@ -248,13 +232,4 @@ class DailyInventory implements Stringable
         }
     }
 
-    public function setCreateTime(?\DateTimeInterface $createTime): void
-    {
-        $this->createTime = $createTime;
-    }
-
-    public function setUpdateTime(?\DateTimeInterface $updateTime): void
-    {
-        $this->updateTime = $updateTime;
-    }
 }

@@ -2,6 +2,7 @@
 
 namespace Tourze\HotelContractBundle\Service;
 
+use Doctrine\ORM\EntityManagerInterface;
 use Tourze\EnvManageBundle\Entity\Env;
 use Tourze\EnvManageBundle\Repository\EnvRepository;
 
@@ -17,6 +18,7 @@ class InventoryConfig
 
     public function __construct(
         private readonly EnvRepository $envRepository,
+        private readonly EntityManagerInterface $entityManager,
     ) {}
 
     /**
@@ -66,10 +68,10 @@ class InventoryConfig
                 $env->setValid(true);
                 $env->setSync(true);
 
-                $this->envRepository->getEntityManager()->persist($env);
+                $this->entityManager->persist($env);
             }
 
-            $this->envRepository->getEntityManager()->flush();
+            $this->entityManager->flush();
             return true;
         } catch (\Throwable) {
             return false;

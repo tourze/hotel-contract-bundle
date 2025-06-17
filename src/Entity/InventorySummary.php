@@ -6,8 +6,7 @@ use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 use Stringable;
 use Symfony\Component\Validator\Constraints as Assert;
-use Tourze\DoctrineTimestampBundle\Attribute\CreateTimeColumn;
-use Tourze\DoctrineTimestampBundle\Attribute\UpdateTimeColumn;
+use Tourze\DoctrineTimestampBundle\Traits\TimestampableAware;
 use Tourze\HotelContractBundle\Enum\InventorySummaryStatusEnum;
 use Tourze\HotelContractBundle\Repository\InventorySummaryRepository;
 use Tourze\HotelProfileBundle\Entity\Hotel;
@@ -19,6 +18,7 @@ use Tourze\HotelProfileBundle\Entity\RoomType;
 #[ORM\Index(name: 'inventory_summary_idx_date_status', columns: ['date', 'status'])]
 class InventorySummary implements Stringable
 {
+    use TimestampableAware;
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column(type: Types::BIGINT)]
@@ -66,13 +66,6 @@ class InventorySummary implements Stringable
     #[ORM\JoinColumn(name: 'lowest_contract_id', nullable: true)]
     private ?HotelContract $lowestContract = null;
 
-    #[CreateTimeColumn]
-    #[ORM\Column(type: Types::DATETIME_IMMUTABLE)]
-    private ?\DateTimeInterface $createTime = null;
-
-    #[UpdateTimeColumn]
-    #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
-    private ?\DateTimeInterface $updateTime = null;
 
     public function __toString(): string
     {
@@ -211,15 +204,6 @@ class InventorySummary implements Stringable
         return $this;
     }
 
-    public function getCreateTime(): ?\DateTimeInterface
-    {
-        return $this->createTime;
-    }
-
-    public function getUpdateTime(): ?\DateTimeInterface
-    {
-        return $this->updateTime;
-    }
 
     /**
      * 更新库存状态
@@ -242,13 +226,4 @@ class InventorySummary implements Stringable
         }
     }
 
-    public function setCreateTime(?\DateTimeInterface $createTime): void
-    {
-        $this->createTime = $createTime;
-    }
-
-    public function setUpdateTime(?\DateTimeInterface $updateTime): void
-    {
-        $this->updateTime = $updateTime;
-    }
 }

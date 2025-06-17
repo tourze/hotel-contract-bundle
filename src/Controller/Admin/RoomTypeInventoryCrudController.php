@@ -470,7 +470,7 @@ class RoomTypeInventoryCrudController extends AbstractCrudController
                                 }
 
                                 // 移动到下一天
-                                $currentDate->modify('+1 day');
+                                $currentDate = $currentDate->modify('+1 day');
                             }
 
                             // 最后刷新一次

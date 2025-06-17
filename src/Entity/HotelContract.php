@@ -8,9 +8,8 @@ use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 use Stringable;
 use Symfony\Component\Validator\Constraints as Assert;
-use Tourze\DoctrineTimestampBundle\Attribute\CreateTimeColumn;
-use Tourze\DoctrineTimestampBundle\Attribute\UpdateTimeColumn;
-use Tourze\DoctrineUserBundle\Attribute\CreatedByColumn;
+use Tourze\DoctrineTimestampBundle\Traits\TimestampableAware;
+use Tourze\DoctrineUserBundle\Traits\CreatedByAware;
 use Tourze\HotelContractBundle\Enum\ContractStatusEnum;
 use Tourze\HotelContractBundle\Enum\ContractTypeEnum;
 use Tourze\HotelContractBundle\Repository\HotelContractRepository;
@@ -22,6 +21,8 @@ use Tourze\HotelProfileBundle\Entity\Hotel;
 #[ORM\Index(name: 'hotel_contract_idx_hotel_id', columns: ['hotel_id'])]
 class HotelContract implements Stringable
 {
+    use TimestampableAware;
+    use CreatedByAware;
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column(type: Types::BIGINT)]
@@ -67,17 +68,6 @@ class HotelContract implements Stringable
     #[ORM\Column(type: Types::INTEGER, options: ['comment' => '合同优先级'])]
     private int $priority = 0;
 
-    #[CreateTimeColumn]
-    #[ORM\Column(type: Types::DATETIME_IMMUTABLE)]
-    private ?\DateTimeInterface $createTime = null;
-
-    #[UpdateTimeColumn]
-    #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
-    private ?\DateTimeInterface $updateTime = null;
-
-    #[CreatedByColumn]
-    #[ORM\Column(type: Types::BIGINT, nullable: true)]
-    private ?int $createdBy = null;
 
     #[ORM\OneToMany(targetEntity: DailyInventory::class, mappedBy: 'contract', fetch: 'EXTRA_LAZY')]
     private Collection $dailyInventories;
@@ -233,20 +223,6 @@ class HotelContract implements Stringable
         return $this;
     }
 
-    public function getCreateTime(): ?\DateTimeInterface
-    {
-        return $this->createTime;
-    }
-
-    public function getUpdateTime(): ?\DateTimeInterface
-    {
-        return $this->updateTime;
-    }
-
-    public function getCreatedBy(): ?int
-    {
-        return $this->createdBy;
-    }
 
     /**
      * @return Collection<int, DailyInventory>
@@ -306,15 +282,6 @@ class HotelContract implements Stringable
         return $this;
     }
 
-    public function setCreateTime(?\DateTimeInterface $createTime): void
-    {
-        $this->createTime = $createTime;
-    }
-
-    public function setUpdateTime(?\DateTimeInterface $updateTime): void
-    {
-        $this->updateTime = $updateTime;
-    }
 
     /**
      * 判断合同是否处于激活状态

@@ -35,7 +35,9 @@ class HotelContractRepositoryTest extends KernelTestCase
     {
         self::bootKernel();
         $this->entityManager = static::getContainer()->get(EntityManagerInterface::class);
-        $this->repository = $this->entityManager->getRepository(HotelContract::class);
+        /** @var HotelContractRepository $repository */
+        $repository = $this->entityManager->getRepository(HotelContract::class);
+        $this->repository = $repository;
         $this->cleanDatabase();
     }
 

@@ -5,10 +5,7 @@ namespace Tourze\HotelContractBundle\Tests\Repository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 use Symfony\Component\HttpKernel\KernelInterface;
-use Tourze\HotelContractBundle\Entity\HotelContract;
 use Tourze\HotelContractBundle\Entity\InventorySummary;
-use Tourze\HotelContractBundle\Enum\ContractStatusEnum;
-use Tourze\HotelContractBundle\Enum\ContractTypeEnum;
 use Tourze\HotelContractBundle\Enum\InventorySummaryStatusEnum;
 use Tourze\HotelContractBundle\HotelContractBundle;
 use Tourze\HotelContractBundle\Repository\InventorySummaryRepository;
@@ -163,7 +160,6 @@ class InventorySummaryRepositoryTest extends KernelTestCase
             new \DateTimeImmutable('2024-01-31')
         );
 
-        $this->assertIsArray($results);
         $this->assertEmpty($results);
     }
 
@@ -336,27 +332,6 @@ class InventorySummaryRepositoryTest extends KernelTestCase
         return $roomType;
     }
 
-    private function createTestContract(string $contractNo = 'TEST001'): HotelContract
-    {
-        $hotel = $this->createTestHotel();
-
-        $contract = new HotelContract();
-        $contract->setContractNo($contractNo);
-        $contract->setHotel($hotel);
-        $contract->setContractType(ContractTypeEnum::FIXED_PRICE);
-        $contract->setStartDate(new \DateTimeImmutable('2024-01-01'));
-        $contract->setEndDate(new \DateTimeImmutable('2024-12-31'));
-        $contract->setTotalRooms(20);
-        $contract->setTotalDays(365);
-        $contract->setTotalAmount('100000.00');
-        $contract->setStatus(ContractStatusEnum::ACTIVE);
-        $contract->setPriority(1);
-
-        $this->entityManager->persist($contract);
-        $this->entityManager->flush();
-
-        return $contract;
-    }
 
     private function createTestSummary(): InventorySummary
     {
