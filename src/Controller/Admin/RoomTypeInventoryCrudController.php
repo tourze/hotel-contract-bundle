@@ -532,7 +532,7 @@ class RoomTypeInventoryCrudController extends AbstractCrudController
     {
         if ($entityInstance instanceof DailyInventory) {
             // 确保酒店根据房型自动设置
-            if ($entityInstance->getRoomType()) {
+            if ($entityInstance->getRoomType() !== null) {
                 $entityInstance->setHotel($entityInstance->getRoomType()->getHotel());
             }
 

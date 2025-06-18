@@ -17,6 +17,7 @@ use Tourze\HotelContractBundle\Service\InventoryWarningService;
 )]
 class InventoryWarningCommand extends Command
 {
+    protected const NAME = 'app:inventory:check-warnings';
     public function __construct(
         private readonly InventorySummaryService $summaryService,
         private readonly InventoryWarningService $warningService,
@@ -39,7 +40,7 @@ class InventoryWarningCommand extends Command
         // 解析日期参数
         $date = null;
         $dateStr = $input->getOption('date');
-        if ($dateStr) {
+        if ($dateStr !== null) {
             try {
                 $date = new \DateTimeImmutable($dateStr);
                 $io->note(sprintf('检查特定日期: %s', $date->format('Y-m-d')));
