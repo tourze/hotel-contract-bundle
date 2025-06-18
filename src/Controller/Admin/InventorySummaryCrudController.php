@@ -598,7 +598,7 @@ class InventorySummaryCrudController extends AbstractCrudController
 
         $data = json_decode($request->getContent(), true);
 
-        if (!$data) {
+        if ($data === null || !is_array($data)) {
             return $this->json(['success' => false, 'message' => '请求数据格式错误'], 400);
         }
 

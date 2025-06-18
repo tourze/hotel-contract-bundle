@@ -267,7 +267,7 @@ class RoomTypeInventoryCrudController extends AbstractCrudController
         $costPrice = (float) $request->request->get('costPrice', 0);
         $sellingPrice = (float) $request->request->get('sellingPrice', 0);
 
-        if (!$roomTypeId || !$contractId || $count < 1 || !$startDate || !$endDate) {
+        if ($roomTypeId === 0 || $contractId === 0 || $count < 1 || !$startDate || !$endDate) {
             $this->addFlash('danger', '请填写所有必填字段');
             return $this->redirectToRoute('admin_room_type_inventory_batch_create');
         }
@@ -431,7 +431,7 @@ class RoomTypeInventoryCrudController extends AbstractCrudController
                                     $existingInventory = $em->getRepository(DailyInventory::class)
                                         ->findOneBy(['code' => $code]);
 
-                                    if (!$existingInventory) {
+                                    if ($existingInventory === null) {
                                         // 创建新的库存
                                         $inventory = new DailyInventory();
                                         $inventory->setRoomType($roomType);

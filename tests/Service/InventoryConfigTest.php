@@ -2,6 +2,7 @@
 
 namespace Tourze\HotelContractBundle\Tests\Service;
 
+use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 use Tourze\EnvManageBundle\Entity\Env;
@@ -11,12 +12,14 @@ use Tourze\HotelContractBundle\Service\InventoryConfig;
 class InventoryConfigTest extends TestCase
 {
     private EnvRepository&MockObject $envRepository;
+    private EntityManagerInterface&MockObject $entityManager;
     private InventoryConfig $inventoryConfig;
 
     protected function setUp(): void
     {
         $this->envRepository = $this->createMock(EnvRepository::class);
-        $this->inventoryConfig = new InventoryConfig($this->envRepository);
+        $this->entityManager = $this->createMock(EntityManagerInterface::class);
+        $this->inventoryConfig = new InventoryConfig($this->envRepository, $this->entityManager);
     }
 
     public function test_getWarningConfig_returnsDefaultWhenNoEnvFound(): void

@@ -38,7 +38,8 @@ class InventoryWarningCommand extends Command
 
         // 解析日期参数
         $date = null;
-        if ($dateStr = $input->getOption('date')) {
+        $dateStr = $input->getOption('date');
+        if ($dateStr) {
             try {
                 $date = new \DateTimeImmutable($dateStr);
                 $io->note(sprintf('检查特定日期: %s', $date->format('Y-m-d')));
@@ -49,7 +50,7 @@ class InventoryWarningCommand extends Command
         }
 
         // 是否先同步库存统计
-        if ($input->getOption('sync')) {
+        if ((bool) $input->getOption('sync')) {
             $io->section('同步库存统计数据');
             $syncResult = $this->summaryService->syncInventorySummary($date);
 

@@ -21,7 +21,7 @@ class HotelContractsController extends AbstractController
     {
         $contract = $entityManager->getRepository(HotelContract::class)->find($id);
 
-        if (!$contract) {
+        if ($contract === null) {
             return $this->json(['error' => 'Contract not found'], 404);
         }
 
