@@ -312,7 +312,7 @@ class InventorySummaryRepositoryTest extends KernelTestCase
 
     private function createTestRoomType(string $name = 'Standard Room', ?Hotel $hotel = null): RoomType
     {
-        if (!$hotel) {
+        if (null === $hotel) {
             $hotel = $this->createTestHotel();
         }
 
@@ -331,7 +331,6 @@ class InventorySummaryRepositoryTest extends KernelTestCase
 
         return $roomType;
     }
-
 
     private function createTestSummary(): InventorySummary
     {

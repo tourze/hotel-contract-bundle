@@ -90,8 +90,6 @@ class InventoryConfigTest extends TestCase
 
         $this->assertIsInt($config['warning_threshold']);
         $this->assertEquals(5, $config['warning_threshold']);
-
-        $this->assertIsBool($config['enable_warning']);
         $this->assertTrue($config['enable_warning']);
 
         $this->assertIsInt($config['warning_interval']);
@@ -112,8 +110,8 @@ class InventoryConfigTest extends TestCase
         // 简化测试，只验证方法执行不抛异常
         $result = $this->inventoryConfig->saveWarningConfig($config);
 
-        // 由于mock的EntityManager可能返回false，我们只验证返回类型
-        $this->assertIsBool($result);
+        // 验证方法执行成功
+        $this->assertTrue($result);
     }
 
     public function test_saveWarningConfig_skipsUndefinedKeys(): void
@@ -130,8 +128,9 @@ class InventoryConfigTest extends TestCase
             ->willReturn(null);
 
         $result = $this->inventoryConfig->saveWarningConfig($config);
-
-        $this->assertIsBool($result);
+        
+        // 验证方法执行成功
+        $this->assertTrue($result);
     }
 
     public function test_getWarningConfig_handlesPartialConfig(): void
@@ -188,8 +187,6 @@ class InventoryConfigTest extends TestCase
             });
 
         $config = $this->inventoryConfig->getWarningConfig();
-
-        $this->assertIsBool($config['enable_warning']);
         $this->assertFalse($config['enable_warning']);
     }
 

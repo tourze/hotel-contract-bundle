@@ -12,7 +12,7 @@ use Tourze\HotelContractBundle\Service\InventorySummaryService;
 use Tourze\HotelContractBundle\Service\InventoryWarningService;
 
 #[AsCommand(
-    name: 'app:inventory:check-warnings',
+    name: self::NAME,
     description: '检查库存预警并发送通知邮件',
 )]
 class InventoryWarningCommand extends Command
@@ -40,7 +40,7 @@ class InventoryWarningCommand extends Command
         // 解析日期参数
         $date = null;
         $dateStr = $input->getOption('date');
-        if ($dateStr !== null) {
+        if ($dateStr !== null && is_string($dateStr) && trim($dateStr) !== '') {
             try {
                 $date = new \DateTimeImmutable($dateStr);
                 $io->note(sprintf('检查特定日期: %s', $date->format('Y-m-d')));
@@ -56,9 +56,9 @@ class InventoryWarningCommand extends Command
             $syncResult = $this->summaryService->syncInventorySummary($date);
 
             if ($syncResult['success']) {
-                $io->success($syncResult['message']);
+                $io->success((string) $syncResult['message']);
             } else {
-                $io->error($syncResult['message']);
+                $io->error((string) $syncResult['message']);
                 return Command::FAILURE;
             }
         }
@@ -69,13 +69,13 @@ class InventoryWarningCommand extends Command
 
         if ($result['success']) {
             if ($result['sent_count'] > 0) {
-                $io->success($result['message']);
+                $io->success((string) $result['message']);
             } else {
-                $io->info($result['message']);
+                $io->info((string) $result['message']);
             }
             return Command::SUCCESS;
         } else {
-            $io->error($result['message']);
+            $io->error((string) $result['message']);
             return Command::FAILURE;
         }
     }

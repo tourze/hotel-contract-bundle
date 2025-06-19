@@ -25,7 +25,7 @@ class HotelContract implements Stringable
     use CreatedByAware;
     #[ORM\Id]
     #[ORM\GeneratedValue]
-    #[ORM\Column(type: Types::BIGINT)]
+    #[ORM\Column(type: Types::BIGINT, options: ['comment' => '主键ID'])]
     private ?int $id = null;
 
     #[ORM\Column(type: Types::STRING, length: 50, unique: true, options: ['comment' => '合同编号'])]

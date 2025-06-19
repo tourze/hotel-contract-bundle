@@ -9,29 +9,35 @@ use Symfony\Component\Routing\Attribute\Route;
 use Tourze\HotelContractBundle\Entity\HotelContract;
 
 /**
- * 合同API控制器
+ * 获取合同详情控制器
  */
-class HotelContractsController extends AbstractController
+class GetContractDetailController extends AbstractController
 {
-    /**
-     * 获取合同详情
-     */
+    public function __construct(
+        private readonly EntityManagerInterface $entityManager,
+    ) {
+    }
+
     #[Route('/admin/api/hotel-contracts/{id}', name: 'admin_api_hotel_contract_detail', methods: ['GET'])]
-    public function getContractDetail(int $id, EntityManagerInterface $entityManager): JsonResponse
+    public function __invoke(int $id): JsonResponse
     {
-        $contract = $entityManager->getRepository(HotelContract::class)->find($id);
+        $contract = $this->entityManager->getRepository(HotelContract::class)->find($id);
 
         if ($contract === null) {
             return $this->json(['error' => 'Contract not found'], 404);
         }
 
+        $hotel = $contract->getHotel();
+        $startDate = $contract->getStartDate();
+        $endDate = $contract->getEndDate();
+
         return $this->json([
             'id' => $contract->getId(),
             'contractNo' => $contract->getContractNo(),
-            'hotelId' => $contract->getHotel()->getId(),
-            'hotelName' => $contract->getHotel()->getName(),
-            'startDate' => $contract->getStartDate()->format('Y-m-d'),
-            'endDate' => $contract->getEndDate()->format('Y-m-d'),
+            'hotelId' => null !== $hotel ? $hotel->getId() : null,
+            'hotelName' => null !== $hotel ? $hotel->getName() : null,
+            'startDate' => null !== $startDate ? $startDate->format('Y-m-d') : null,
+            'endDate' => null !== $endDate ? $endDate->format('Y-m-d') : null,
             'totalRooms' => $contract->getTotalRooms(),
             'totalDays' => $contract->getTotalDays(),
             'totalAmount' => $contract->getTotalAmount(),

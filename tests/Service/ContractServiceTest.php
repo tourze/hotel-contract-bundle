@@ -246,7 +246,7 @@ class ContractServiceTest extends TestCase
         $contract->setContractType(ContractTypeEnum::FIXED_PRICE);
         $contract->setStartDate(new \DateTimeImmutable('2024-01-01'));
         $contract->setEndDate(new \DateTimeImmutable('2024-12-31'));
-        $contract->setTotalAmount(100000.00);
+        $contract->setTotalAmount('100000.00');
 
         // Mock期望
         $this->mailer->expects($this->once())
@@ -258,7 +258,7 @@ class ContractServiceTest extends TestCase
                 return str_contains($subject, '新合同创建通知') &&
                     str_contains($subject, 'HT20241201001') &&
                     str_contains($body, '测试酒店') &&
-                    str_contains($body, '100000 元');
+                    str_contains($body, '100000.00 元');
             }));
 
         $this->logger->expects($this->once())
@@ -281,7 +281,7 @@ class ContractServiceTest extends TestCase
         $contract->setContractType(ContractTypeEnum::FIXED_PRICE);
         $contract->setStartDate(new \DateTimeImmutable('2024-01-01'));
         $contract->setEndDate(new \DateTimeImmutable('2024-12-31'));
-        $contract->setTotalAmount(100000.00);
+        $contract->setTotalAmount('100000.00');
 
         // Mock期望 - 邮件发送失败
         $this->mailer->expects($this->once())
@@ -312,7 +312,7 @@ class ContractServiceTest extends TestCase
         $contract->setStatus(ContractStatusEnum::ACTIVE);
         $contract->setStartDate(new \DateTimeImmutable('2024-01-01'));
         $contract->setEndDate(new \DateTimeImmutable('2024-12-31'));
-        $contract->setTotalAmount(100000.00);
+        $contract->setTotalAmount('100000.00');
 
         // Mock期望
         $this->mailer->expects($this->once())
@@ -348,7 +348,7 @@ class ContractServiceTest extends TestCase
         $contract->setStatus(ContractStatusEnum::ACTIVE);
         $contract->setStartDate(new \DateTimeImmutable('2024-01-01'));
         $contract->setEndDate(new \DateTimeImmutable('2024-12-31'));
-        $contract->setTotalAmount(100000.00);
+        $contract->setTotalAmount('100000.00');
 
         // Mock期望 - 邮件发送失败
         $this->mailer->expects($this->once())

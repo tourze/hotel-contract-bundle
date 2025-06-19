@@ -24,7 +24,7 @@ class DailyInventory implements Stringable
     use TimestampableAware;
     #[ORM\Id]
     #[ORM\GeneratedValue]
-    #[ORM\Column(type: Types::BIGINT)]
+    #[ORM\Column(type: Types::BIGINT, options: ['comment' => '主键ID'])]
     private ?int $id = null;
 
     #[ORM\Column(type: Types::STRING, length: 100, unique: true, options: ['comment' => '库存唯一编码'])]
@@ -67,13 +67,13 @@ class DailyInventory implements Stringable
 
 
     #[UpdatedByColumn]
-    #[ORM\Column(type: Types::STRING, nullable: true)]
+    #[ORM\Column(type: Types::STRING, nullable: true, options: ['comment' => '最后修改人'])]
     private ?string $lastModifiedBy = null;
 
     public function __toString(): string
     {
-        $typeInfo = $this->roomType ? $this->roomType->getName() : 'Unknown';
-        $date = $this->date ? $this->date->format('Y-m-d') : 'Unknown Date';
+        $typeInfo = null !== $this->roomType ? $this->roomType->getName() : 'Unknown';
+        $date = null !== $this->date ? $this->date->format('Y-m-d') : 'Unknown Date';
         return sprintf('%s - %s - %s', $typeInfo, $this->code, $date);
     }
 

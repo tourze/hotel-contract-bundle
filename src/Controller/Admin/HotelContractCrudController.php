@@ -39,6 +39,9 @@ use Tourze\HotelContractBundle\Enum\DailyInventoryStatusEnum;
 use Tourze\HotelContractBundle\Repository\DailyInventoryRepository;
 use Tourze\HotelContractBundle\Service\ContractService;
 
+/**
+ * @extends AbstractCrudController<HotelContract>
+ */
 class HotelContractCrudController extends AbstractCrudController
 {
     public function __construct(
@@ -278,6 +281,11 @@ class HotelContractCrudController extends AbstractCrudController
 
     public function persistEntity(EntityManagerInterface $entityManager, $entityInstance): void
     {
+        if (!$entityInstance instanceof HotelContract) {
+            parent::persistEntity($entityManager, $entityInstance);
+            return;
+        }
+
         // 生成合同编号
         if (empty($entityInstance->getContractNo())) {
             $contractNo = $this->contractService->generateContractNumber();

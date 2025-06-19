@@ -2,7 +2,6 @@
 
 namespace Tourze\HotelContractBundle\Controller\Admin;
 
-use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\QueryBuilder;
 use EasyCorp\Bundle\EasyAdminBundle\Collection\FieldCollection;
 use EasyCorp\Bundle\EasyAdminBundle\Collection\FilterCollection;
@@ -24,30 +23,15 @@ use EasyCorp\Bundle\EasyAdminBundle\Field\PercentField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\TextField;
 use EasyCorp\Bundle\EasyAdminBundle\Filter\DateTimeFilter;
 use EasyCorp\Bundle\EasyAdminBundle\Filter\EntityFilter;
-use EasyCorp\Bundle\EasyAdminBundle\Router\AdminUrlGenerator;
-use Psr\Log\LoggerInterface;
-use Symfony\Component\HttpFoundation\Request;
-use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\Routing\Attribute\Route;
 use Tourze\HotelContractBundle\Entity\DailyInventory;
-use Tourze\HotelContractBundle\Entity\HotelContract;
-use Tourze\HotelContractBundle\Enum\ContractStatusEnum;
 use Tourze\HotelContractBundle\Enum\DailyInventoryStatusEnum;
-use Tourze\HotelContractBundle\Service\RoomTypeInventoryService;
-use Tourze\HotelProfileBundle\Entity\RoomType;
 
 /**
  * 房型库存管理控制器
+ * @extends AbstractCrudController<DailyInventory>
  */
 class RoomTypeInventoryCrudController extends AbstractCrudController
 {
-    public function __construct(
-        private readonly AdminUrlGenerator $adminUrlGenerator,
-        private readonly LoggerInterface $logger,
-        private readonly RoomTypeInventoryService $roomTypeInventoryService,
-    ) {
-    }
-
     public static function getEntityFqcn(): string
     {
         return DailyInventory::class;
@@ -67,19 +51,25 @@ class RoomTypeInventoryCrudController extends AbstractCrudController
     public function configureActions(Actions $actions): Actions
     {
         $batchCreateInventory = Action::new('batchCreateInventory', '批量创建库存')
-            ->linkToCrudAction('batchCreateInventoryForm')
+            ->linkToRoute('admin_room_type_inventory_batch_create')
             ->createAsGlobalAction()
             ->setIcon('fa fa-plus-circle');
 
         $generateAllContractInventory = Action::new('generateAllContractInventory', '一键生成所有合同库存')
-            ->linkToCrudAction('generateAllContractInventoryForm')
+            ->linkToRoute('admin_room_type_inventory_generate_all_contract')
             ->createAsGlobalAction()
             ->setIcon('fa fa-magic');
+
+        $batchPriceUpdate = Action::new('batchPriceUpdate', '批量更新价格')
+            ->linkToRoute('admin_room_type_inventory_batch_price_update')
+            ->createAsGlobalAction()
+            ->setIcon('fa fa-dollar-sign');
 
         return $actions
             ->add(Crud::PAGE_INDEX, Action::DETAIL)
             ->add(Crud::PAGE_INDEX, $batchCreateInventory)
             ->add(Crud::PAGE_INDEX, $generateAllContractInventory)
+            ->add(Crud::PAGE_INDEX, $batchPriceUpdate)
             ->update(Crud::PAGE_INDEX, Action::NEW, function (Action $action) {
                 return $action->setLabel('添加库存');
             });
@@ -222,387 +212,5 @@ class RoomTypeInventoryCrudController extends AbstractCrudController
             ->addSelect('roomType', 'hotel', 'contract');
 
         return $queryBuilder;
-    }
-
-    /**
-     * 批量创建库存表单
-     */
-    #[Route('/admin/room-type-inventory/batch-create', name: 'admin_room_type_inventory_batch_create')]
-    public function batchCreateInventoryForm(Request $request, EntityManagerInterface $em): Response
-    {
-        // 获取所有房型
-        $roomTypes = $em->getRepository(RoomType::class)
-            ->createQueryBuilder('rt')
-            ->leftJoin('rt.hotel', 'h')
-            ->addSelect('h')
-            ->orderBy('h.name', 'ASC')
-            ->addOrderBy('rt.name', 'ASC')
-            ->getQuery()
-            ->getResult();
-
-        // 获取所有合同
-        $contracts = $em->getRepository(HotelContract::class)
-            ->createQueryBuilder('c')
-            ->orderBy('c.contractNo', 'ASC')
-            ->getQuery()
-            ->getResult();
-
-        return $this->render('@HotelContract/admin/room_type_inventory/batch_create.html.twig', [
-            'roomTypes' => $roomTypes,
-            'contracts' => $contracts,
-        ]);
-    }
-
-    /**
-     * 批量创建库存处理
-     */
-    #[Route('/admin/room-type-inventory/batch-create-process', name: 'admin_room_type_inventory_batch_create_process', methods: ['POST'])]
-    public function batchCreateInventoryProcess(Request $request, EntityManagerInterface $em): Response
-    {
-        $roomTypeId = $request->request->getInt('roomType');
-        $contractId = $request->request->getInt('contract');
-        $count = $request->request->getInt('count', 1);
-        $startDate = $request->request->get('startDate');
-        $endDate = $request->request->get('endDate');
-        $costPrice = (float) $request->request->get('costPrice', 0);
-        $sellingPrice = (float) $request->request->get('sellingPrice', 0);
-
-        if ($roomTypeId === 0 || $contractId === 0 || $count < 1 || !$startDate || !$endDate) {
-            $this->addFlash('danger', '请填写所有必填字段');
-            return $this->redirectToRoute('admin_room_type_inventory_batch_create');
-        }
-
-        try {
-            $startDateTime = new \DateTimeImmutable($startDate);
-            $endDateTime = new \DateTimeImmutable($endDate);
-
-            $result = $this->roomTypeInventoryService->oneClickGenerateRoomTypeInventory(
-                $contractId,
-                $roomTypeId,
-                $count,
-                $startDateTime,
-                $endDateTime,
-                $costPrice,
-                $sellingPrice
-            );
-
-            if ($result['success']) {
-                $this->addFlash('success', $result['message']);
-            } else {
-                $this->addFlash('danger', $result['message']);
-            }
-        } catch (\Throwable $e) {
-            $this->addFlash('danger', '创建库存失败: ' . $e->getMessage());
-        }
-
-        return $this->redirect($this->adminUrlGenerator
-            ->setController(self::class)
-            ->setAction(Action::INDEX)
-            ->generateUrl());
-    }
-
-    /**
-     * 为所有生效合同生成库存表单
-     */
-    #[Route('/admin/room-type-inventory/generate-all-contract', name: 'admin_room_type_inventory_generate_all_contract')]
-    public function generateAllContractInventoryForm(Request $request, EntityManagerInterface $em): Response
-    {
-        return $this->render('@HotelContract/admin/room_type_inventory/generate_all_contract.html.twig', [
-            'days' => 30, // 默认生成30天的库存
-        ]);
-    }
-
-    /**
-     * 为所有生效合同生成库存处理
-     */
-    #[Route('/admin/room-type-inventory/generate-all-contract-process', name: 'admin_room_type_inventory_generate_all_contract_process', methods: ['POST'])]
-    public function generateAllContractInventoryProcess(Request $request, EntityManagerInterface $em): Response
-    {
-        // 获取参数
-        $days = $request->request->getInt('days', 30);
-        $startDate = new \DateTimeImmutable();
-        $endDate = (new \DateTimeImmutable())->modify('+' . $days . ' days');
-
-        // 开始事务
-        $em->getConnection()->beginTransaction();
-        try {
-            // 获取所有生效的合同
-            $activeContracts = $em->getRepository(HotelContract::class)
-                ->createQueryBuilder('c')
-                ->where('c.status = :status')
-                ->andWhere('c.startDate <= :endDate')
-                ->andWhere('c.endDate >= :startDate')
-                ->setParameter('status', ContractStatusEnum::ACTIVE)
-                ->setParameter('startDate', $startDate)
-                ->setParameter('endDate', $endDate)
-                ->getQuery()
-                ->getResult();
-
-            if (empty($activeContracts)) {
-                $this->addFlash('warning', '未找到符合条件的生效合同');
-                return $this->redirectToRoute('admin_room_type_inventory_generate_all_contract');
-            }
-
-            $totalGenerated = 0;
-            $totalSkipped = 0;
-            $totalFailed = 0;
-            $processedContracts = 0;
-
-            // 记录处理开始
-            $this->logger->info('开始批量生成库存', [
-                'contractCount' => count($activeContracts),
-                'startDate' => $startDate->format('Y-m-d'),
-                'endDate' => $endDate->format('Y-m-d'),
-                'days' => $days
-            ]);
-
-            // 处理每个合同
-            foreach ($activeContracts as $contract) {
-                $processedContracts++;
-
-                // 获取合同关联的酒店所有房型
-                $roomTypes = $em->getRepository(RoomType::class)
-                    ->createQueryBuilder('rt')
-                    ->where('rt.hotel = :hotel')
-                    ->setParameter('hotel', $contract->getHotel())
-                    ->getQuery()
-                    ->getResult();
-
-                // 计算每个房型应分配的库存数量
-                $totalRoomTypes = count($roomTypes);
-                if ($totalRoomTypes > 0) {
-                    // 从合同获取总房间数
-                    $contractTotalRooms = max(1, $contract->getTotalRooms());
-
-                    // 平均分配给每个房型，确保总数不超过合同规定数量
-                    $roomsPerType = (int)floor($contractTotalRooms / $totalRoomTypes);
-                    $extraRooms = $contractTotalRooms % $totalRoomTypes;
-
-                    $this->logger->info('合同库存分配', [
-                        'contractNo' => $contract->getContractNo(),
-                        'totalRooms' => $contractTotalRooms,
-                        'roomTypes' => $totalRoomTypes,
-                        'roomsPerType' => $roomsPerType
-                    ]);
-
-                    $typeIndex = 0;
-                    foreach ($roomTypes as $roomType) {
-                        // 计算此房型应分配的房间数
-                        $targetRooms = $roomsPerType;
-                        if ($typeIndex < $extraRooms) {
-                            $targetRooms += 1; // 将余数分配给前几个房型
-                        }
-                        $typeIndex++;
-
-                        // 对每个房型生成库存
-                        try {
-                            // 记录处理情况
-                            $this->logger->info('处理合同房型库存', [
-                                'contractNo' => $contract->getContractNo(),
-                                'roomType' => $roomType->getName(),
-                                'targetRooms' => $targetRooms
-                            ]);
-
-                            // 处理每一天的库存
-                            $currentDate = clone $startDate;
-                            $skippedDaysCount = 0;
-                            $generatedDaysCount = 0;
-                            $generatedInventoryCount = 0;
-
-                            while ($currentDate <= $endDate) {
-                                // 生成当天的库存
-                                $dateFormatted = $currentDate->format('Y-m-d');
-
-                                // 需要创建的库存数量
-                                $toCreateCount = $targetRooms;
-                                $createdToday = 0;
-
-                                for ($i = 1; $i <= $toCreateCount; $i++) {
-                                    // 生成唯一的code
-                                    $code = sprintf(
-                                        'INV-%s-%s-%s-%d',
-                                        $contract->getContractNo(),
-                                        $roomType->getId(),
-                                        $dateFormatted,
-                                        $i
-                                    );
-
-                                    // 检查是否已存在
-                                    $existingInventory = $em->getRepository(DailyInventory::class)
-                                        ->findOneBy(['code' => $code]);
-
-                                    if ($existingInventory === null) {
-                                        // 创建新的库存
-                                        $inventory = new DailyInventory();
-                                        $inventory->setRoomType($roomType);
-                                        $inventory->setHotel($roomType->getHotel());
-                                        $inventory->setContract($contract);
-                                        $inventory->setDate(clone $currentDate);
-                                        $inventory->setStatus(DailyInventoryStatusEnum::AVAILABLE);
-                                        $inventory->setIsReserved(false);
-
-                                        // 设置唯一code
-                                        $inventory->setCode($code);
-
-                                        $em->persist($inventory);
-                                        $generatedInventoryCount++;
-                                        $createdToday++;
-
-                                        // 每50个库存刷新一次，避免内存问题
-                                        if ($generatedInventoryCount % 50 === 0) {
-                                            $em->flush();
-
-                                            // 提交当前事务并开启新事务，防止单个事务过大
-                                            $em->getConnection()->commit();
-                                            $em->getConnection()->beginTransaction();
-                                        }
-                                    } else {
-                                        $totalSkipped++;
-                                    }
-                                }
-
-                                // 更新统计
-                                if ($createdToday > 0) {
-                                    $generatedDaysCount++;
-                                    $totalGenerated += $createdToday;
-                                } else {
-                                    $skippedDaysCount++;
-                                }
-
-                                // 移动到下一天
-                                $currentDate = $currentDate->modify('+1 day');
-                            }
-
-                            // 最后刷新一次
-                            $em->flush();
-
-                            // 日志消息
-                            if ($generatedDaysCount > 0) {
-                                $this->addFlash('info', sprintf(
-                                    '合同 %s 的房型 %s: 处理了%d天，生成了%d个库存，跳过了%d天',
-                                    $contract->getContractNo(),
-                                    $roomType->getName(),
-                                    $generatedDaysCount + $skippedDaysCount,
-                                    $generatedInventoryCount,
-                                    $skippedDaysCount
-                                ));
-                            }
-                        } catch (\Throwable $e) {
-                            $this->logger->error('生成库存失败', [
-                                'exception' => $e,
-                            ]);
-                            $this->addFlash('danger', sprintf(
-                                '为合同 %s 的房型 %s 生成库存失败: %s',
-                                $contract->getContractNo(),
-                                $roomType->getName(),
-                                $e->getMessage()
-                            ));
-                            $totalFailed++;
-                        }
-                    }
-                }
-            }
-
-            $this->addFlash('success', sprintf(
-                '处理完成: 处理了%d个合同，生成了%d个库存，跳过了%d个已存在的库存，失败%d个',
-                $processedContracts,
-                $totalGenerated,
-                $totalSkipped,
-                $totalFailed
-            ));
-
-            // 提交事务
-            $em->getConnection()->commit();
-        } catch (\Throwable $e) {
-            // 回滚事务
-            $em->getConnection()->rollBack();
-            $this->addFlash('danger', '批量生成库存失败: ' . $e->getMessage());
-        }
-
-        return $this->redirect($this->adminUrlGenerator
-            ->setController(self::class)
-            ->setAction(Action::INDEX)
-            ->generateUrl());
-    }
-
-    /**
-     * 持久化实体前的操作
-     */
-    public function persistEntity(EntityManagerInterface $entityManager, $entityInstance): void
-    {
-        if ($entityInstance instanceof DailyInventory) {
-            // 确保酒店根据房型自动设置
-            if ($entityInstance->getRoomType() !== null) {
-                $entityInstance->setHotel($entityInstance->getRoomType()->getHotel());
-            }
-
-            // 触发利润率计算
-            $costPrice = $entityInstance->getCostPrice();
-            $sellingPrice = $entityInstance->getSellingPrice();
-            $entityInstance->setCostPrice($costPrice);
-            $entityInstance->setSellingPrice($sellingPrice);
-        }
-
-        parent::persistEntity($entityManager, $entityInstance);
-    }
-
-    /**
-     * 更新实体前的操作
-     */
-    public function updateEntity(EntityManagerInterface $entityManager, $entityInstance): void
-    {
-        if ($entityInstance instanceof DailyInventory) {
-            // 触发利润率计算
-            $costPrice = $entityInstance->getCostPrice();
-            $sellingPrice = $entityInstance->getSellingPrice();
-            $entityInstance->setCostPrice($costPrice);
-            $entityInstance->setSellingPrice($sellingPrice);
-        }
-
-        parent::updateEntity($entityManager, $entityInstance);
-    }
-
-    /**
-     * 批量调价表单
-     */
-    #[Route('/admin/room-type-inventory/batch-price-update', name: 'admin_room_type_inventory_batch_price_update')]
-    public function batchPriceUpdateForm(Request $request, EntityManagerInterface $em): Response
-    {
-        // 获取所有酒店
-        $hotels = $em->getRepository(\Tourze\HotelProfileBundle\Entity\Hotel::class)
-            ->findBy([], ['name' => 'ASC']);
-
-        // 获取所有房型
-        $roomTypes = $em->getRepository(RoomType::class)
-            ->createQueryBuilder('rt')
-            ->leftJoin('rt.hotel', 'h')
-            ->addSelect('h')
-            ->orderBy('h.name', 'ASC')
-            ->addOrderBy('rt.name', 'ASC')
-            ->getQuery()
-            ->getResult();
-
-        // 获取所有合同
-        $contracts = $em->getRepository(HotelContract::class)
-            ->findBy([], ['contractNo' => 'ASC']);
-
-        return $this->render('@HotelContract/admin/room_type_inventory/batch_price_update.html.twig', [
-            'hotels' => $hotels,
-            'roomTypes' => $roomTypes,
-            'contracts' => $contracts,
-        ]);
-    }
-
-    /**
-     * 批量调价处理
-     */
-    #[Route('/admin/room-type-inventory/batch-price-update-process', name: 'admin_room_type_inventory_batch_price_update_process', methods: ['POST'])]
-    public function batchPriceUpdateProcess(Request $request): Response
-    {
-        // 调用价格管理的批量调价功能
-        return $this->redirect($this->generateUrl('admin', [
-            'crudAction' => 'batchPriceAdjustment',
-            'crudControllerFqcn' => InventorySummaryCrudController::class,
-        ]));
     }
 }
