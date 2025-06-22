@@ -25,15 +25,12 @@ class HotelContractBundleTest extends TestCase
     {
         $dependencies = HotelContractBundle::getBundleDependencies();
 
-        $this->assertIsArray($dependencies);
         $this->assertArrayHasKey(HotelProfileBundle::class, $dependencies);
         $this->assertSame(['all' => true], $dependencies[HotelProfileBundle::class]);
     }
 
     public function test_getBundleDependencies_isStaticMethod(): void
     {
-        $this->assertTrue(method_exists(HotelContractBundle::class, 'getBundleDependencies'));
-
         $reflection = new \ReflectionMethod(HotelContractBundle::class, 'getBundleDependencies');
         $this->assertTrue($reflection->isStatic());
     }

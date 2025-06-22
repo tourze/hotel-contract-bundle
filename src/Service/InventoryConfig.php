@@ -32,7 +32,7 @@ class InventoryConfig
 
         foreach (self::CONFIG_KEYS as $key => $envName) {
             $env = $this->envRepository->findOneBy(['name' => $envName, 'valid' => true]);
-            if ($env) {
+            if ($env !== null) {
                 $value = $env->getValue();
 
                 // 根据配置项类型转换值

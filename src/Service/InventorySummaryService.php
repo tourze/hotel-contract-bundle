@@ -3,8 +3,6 @@
 namespace Tourze\HotelContractBundle\Service;
 
 use Doctrine\ORM\EntityManagerInterface;
-use Tourze\HotelContractBundle\Entity\DailyInventory;
-use Tourze\HotelContractBundle\Entity\HotelContract;
 use Tourze\HotelContractBundle\Entity\InventorySummary;
 use Tourze\HotelContractBundle\Enum\DailyInventoryStatusEnum;
 use Tourze\HotelContractBundle\Enum\InventorySummaryStatusEnum;
@@ -12,6 +10,8 @@ use Tourze\HotelContractBundle\Repository\DailyInventoryRepository;
 use Tourze\HotelContractBundle\Repository\InventorySummaryRepository;
 use Tourze\HotelProfileBundle\Entity\Hotel;
 use Tourze\HotelProfileBundle\Entity\RoomType;
+use Tourze\HotelProfileBundle\Repository\HotelRepository;
+use Tourze\HotelProfileBundle\Repository\RoomTypeRepository;
 
 class InventorySummaryService
 {
@@ -19,167 +19,160 @@ class InventorySummaryService
         private readonly EntityManagerInterface $entityManager,
         private readonly DailyInventoryRepository $inventoryRepository,
         private readonly InventorySummaryRepository $inventorySummaryRepository,
-        private readonly InventoryConfig $inventoryConfig,
+        private readonly HotelRepository $hotelRepository,
+        private readonly RoomTypeRepository $roomTypeRepository,
     ) {}
 
     /**
-     * 同步库存统计
+     * 同步库存统计数据
      *
-     * @param \DateTimeInterface|null $date 指定日期，为空则处理所有日期
-     *
-     * @return array 操作结果
+     * @param \DateTimeInterface|null $date 指定日期，null表示处理未来一个月
      */
     public function syncInventorySummary(?\DateTimeInterface $date = null): array
     {
-        // 构建查询条件
-        $qb = $this->entityManager->createQueryBuilder();
-        $qb->select('IDENTITY(di.hotel) as hotelId', 'IDENTITY(di.roomType) as roomTypeId', 'di.date as date')
-            ->addSelect('COUNT(di.id) as totalRooms')
-            ->addSelect('SUM(CASE WHEN di.status = :statusAvailable THEN 1 ELSE 0 END) as availableRooms')
-            ->addSelect('SUM(CASE WHEN di.isReserved = true THEN 1 ELSE 0 END) as reservedRooms')
-            ->addSelect('SUM(CASE WHEN di.status = :statusSold THEN 1 ELSE 0 END) as soldRooms')
-            ->addSelect('SUM(CASE WHEN di.status = :statusPending THEN 1 ELSE 0 END) as pendingRooms')
-            ->addSelect('MIN(di.costPrice) as lowestPrice')
-            ->from(DailyInventory::class, 'di')
-            ->groupBy('di.hotel', 'di.roomType', 'di.date')
-            ->setParameter('statusAvailable', DailyInventoryStatusEnum::AVAILABLE->value)
-            ->setParameter('statusSold', DailyInventoryStatusEnum::SOLD->value)
-            ->setParameter('statusPending', DailyInventoryStatusEnum::PENDING->value);
+        try {
+            $this->entityManager->getConnection()->beginTransaction();
 
-        if ($date !== null) {
-            $qb->andWhere('di.date = :date')
-                ->setParameter('date', $date->format('Y-m-d'));
-        }
-
-        $results = $qb->getQuery()->getResult();
-        $updatedCount = 0;
-        $createdCount = 0;
-
-        foreach ($results as $result) {
-            // 查找酒店和房型实体
-            $hotel = $this->entityManager->getRepository(Hotel::class)->find($result['hotelId']);
-            $roomType = $this->entityManager->getRepository(RoomType::class)->find($result['roomTypeId']);
-
-            if (!$hotel || !$roomType) {
-                continue;
-            }
-
-            // 查找是否已存在汇总记录
-            $summary = $this->entityManager->getRepository(InventorySummary::class)->findOneBy([
-                'hotel' => $hotel,
-                'roomType' => $roomType,
-                'date' => $result['date']
-            ]);
-
-            if (!$summary) {
-                // 创建新的汇总记录
-                $summary = new InventorySummary();
-                $summary->setHotel($hotel)
-                    ->setRoomType($roomType)
-                    ->setDate(new \DateTimeImmutable($result['date']));
-                $createdCount++;
+            if ($date !== null) {
+                // 处理指定日期
+                $this->syncSingleDate($date);
+                $message = sprintf('成功同步 %s 的库存统计数据', $date->format('Y-m-d'));
             } else {
-                $updatedCount++;
+                // 处理未来一个月的数据
+                $startDate = new \DateTimeImmutable();
+                $endDate = $startDate->modify('+1 month');
+
+                $syncCount = $this->syncDateRange($startDate, $endDate);
+                $message = sprintf('成功同步 %d 天的库存统计数据', $syncCount);
             }
 
-            // 更新统计数据
-            $summary->setTotalRooms((int)$result['totalRooms'])
-                ->setAvailableRooms((int)$result['availableRooms'])
-                ->setReservedRooms((int)$result['reservedRooms'])
-                ->setSoldRooms((int)$result['soldRooms'])
-                ->setPendingRooms((int)$result['pendingRooms'])
-                ->setLowestPrice($result['lowestPrice'] ?: '0.00');
+            $this->entityManager->getConnection()->commit();
 
-            // 计算状态
-            $availablePercent = $result['totalRooms'] > 0 ? ($result['availableRooms'] / $result['totalRooms'] * 100) : 0;
+            return [
+                'success' => true,
+                'message' => $message,
+            ];
+        } catch (\Exception $e) {
+            $this->entityManager->getConnection()->rollBack();
 
-            // 获取预警阈值
-            $warningConfig = $this->inventoryConfig->getWarningConfig();
-            $warningThreshold = $warningConfig['warning_threshold'] ?? 10;
-
-            if ($availablePercent <= 0) {
-                $summary->setStatus(InventorySummaryStatusEnum::SOLD_OUT);
-            } elseif ($availablePercent <= $warningThreshold) {
-                $summary->setStatus(InventorySummaryStatusEnum::WARNING);
-            } else {
-                $summary->setStatus(InventorySummaryStatusEnum::NORMAL);
-            }
-
-            // 查找最低价格对应的合同
-            if ($result['lowestPrice']) {
-                $lowestPriceInventory = $this->inventoryRepository->createQueryBuilder('di')
-                    ->where('di.hotel = :hotel')
-                    ->andWhere('di.roomType = :roomType')
-                    ->andWhere('di.date = :date')
-                    ->andWhere('di.costPrice = :price')
-                    ->setParameter('hotel', $hotel)
-                    ->setParameter('roomType', $roomType)
-                    ->setParameter('date', $result['date'])
-                    ->setParameter('price', $result['lowestPrice'])
-                    ->setMaxResults(1)
-                    ->getQuery()
-                    ->getOneOrNullResult();
-
-                if ($lowestPriceInventory && $lowestPriceInventory->getContract()) {
-                    $summary->setLowestPrice($lowestPriceInventory->getCostPrice());
-                    $contractEntity = $this->entityManager->getRepository(HotelContract::class)->find($lowestPriceInventory->getContract()->getId());
-                    if ($contractEntity) {
-                        $summary->setLowestContract($contractEntity);
-                    }
-                }
-            }
-
-            $this->entityManager->persist($summary);
+            return [
+                'success' => false,
+                'message' => '同步库存统计数据失败: ' . $e->getMessage(),
+            ];
         }
-
-        $this->entityManager->flush();
-
-        return [
-            'success' => true,
-            'message' => sprintf('库存统计同步完成，新建%d条记录，更新%d条记录', $createdCount, $updatedCount),
-            'created_count' => $createdCount,
-            'updated_count' => $updatedCount
-        ];
     }
 
     /**
-     * 更新指定日期范围内的库存统计
-     *
-     * @param Hotel $hotel 酒店
-     * @param RoomType $roomType 房型
-     * @param \DateTimeInterface $startDate 开始日期
-     * @param \DateTimeInterface $endDate 结束日期
+     * 同步指定日期范围的库存统计
+     */
+    private function syncDateRange(\DateTimeInterface $startDate, \DateTimeInterface $endDate): int
+    {
+        $hotels = $this->hotelRepository->findAll();
+        $roomTypes = $this->roomTypeRepository->findAll();
+
+        $syncCount = 0;
+        $currentDate = clone $startDate;
+
+        while ($currentDate <= $endDate) {
+            foreach ($hotels as $hotel) {
+                $hotelRoomTypes = array_filter($roomTypes, function (RoomType $roomType) use ($hotel) {
+                    return $roomType->getHotel()->getId() === $hotel->getId();
+                });
+
+                foreach ($hotelRoomTypes as $roomType) {
+                    $this->updateDailyInventorySummary($hotel, $roomType, $currentDate);
+                }
+            }
+
+            $syncCount++;
+            $currentDate = new \DateTimeImmutable($currentDate->format('Y-m-d H:i:s'));
+            $currentDate = $currentDate->modify('+1 day');
+        }
+
+        return $syncCount;
+    }
+
+    /**
+     * 同步单个日期的库存统计
+     */
+    private function syncSingleDate(\DateTimeInterface $date): void
+    {
+        // 获取所有酒店和房型的库存统计
+        $existingSummaries = $this->inventorySummaryRepository
+            ->createQueryBuilder('is')
+            ->leftJoin('is.hotel', 'h')
+            ->leftJoin('is.roomType', 'rt')
+            ->addSelect('h', 'rt')
+            ->where('is.date = :date')
+            ->setParameter('date', $date)
+            ->getQuery()
+            ->getResult();
+
+        // 获取需要重新计算的酒店和房型组合
+        $hotelsAndRoomTypes = [];
+        foreach ($existingSummaries as $summary) {
+            $key = $summary->getHotel()->getId() . '_' . $summary->getRoomType()->getId();
+            $hotelsAndRoomTypes[$key] = [
+                'hotel' => $summary->getHotel(),
+                'roomType' => $summary->getRoomType(),
+            ];
+        }
+
+        // 如果没有现有的统计记录，则查找当天有库存记录的酒店和房型
+        if (empty($hotelsAndRoomTypes)) {
+            $inventories = $this->inventoryRepository
+                ->createQueryBuilder('di')
+                ->leftJoin('di.hotel', 'h')
+                ->leftJoin('di.roomType', 'rt')
+                ->addSelect('h', 'rt')
+                ->where('di.date = :date')
+                ->setParameter('date', $date)
+                ->getQuery()
+                ->getResult();
+
+            foreach ($inventories as $inventory) {
+                $key = $inventory->getHotel()->getId() . '_' . $inventory->getRoomType()->getId();
+                $hotelsAndRoomTypes[$key] = [
+                    'hotel' => $inventory->getHotel(),
+                    'roomType' => $inventory->getRoomType(),
+                ];
+            }
+        }
+
+        // 更新每个酒店+房型组合的库存统计
+        foreach ($hotelsAndRoomTypes as $combination) {
+            $this->updateDailyInventorySummary(
+                $combination['hotel'],
+                $combination['roomType'],
+                $date
+            );
+        }
+    }
+
+    /**
+     * 更新库存统计数据（指定酒店、房型和日期范围）
      */
     public function updateInventorySummary(Hotel $hotel, RoomType $roomType, \DateTimeInterface $startDate, \DateTimeInterface $endDate): void
     {
         $currentDate = clone $startDate;
-        $endDateCopy = clone $endDate;
 
-        while ($currentDate <= $endDateCopy) {
-            $this->updateDailyInventorySummary($hotel, $roomType, clone $currentDate);
-            $currentDate = new \DateTimeImmutable($currentDate->format('Y-m-d'));
+        while ($currentDate <= $endDate) {
+            $this->updateDailyInventorySummary($hotel, $roomType, $currentDate);
+            $currentDate = new \DateTimeImmutable($currentDate->format('Y-m-d H:i:s'));
             $currentDate = $currentDate->modify('+1 day');
         }
     }
 
     /**
-     * 更新单日库存统计
-     *
-     * @param Hotel $hotel 酒店
-     * @param RoomType $roomType 房型
-     * @param \DateTimeInterface $date 日期
+     * 更新每日库存统计数据
      */
     public function updateDailyInventorySummary(Hotel $hotel, RoomType $roomType, \DateTimeInterface $date): void
     {
-        // 查找当天该酒店+房型的库存统计记录
-        $summary = $this->inventorySummaryRepository->findOneBy([
-            'hotel' => $hotel,
-            'roomType' => $roomType,
-            'date' => $date
-        ]);
+        // 查找现有的库存统计记录
+        $summary = $this->inventorySummaryRepository
+            ->findByHotelRoomTypeAndDate($hotel->getId(), $roomType->getId(), $date);
 
-        // 如果不存在则创建
-        if (!$summary) {
+        if ($summary === null) {
             $summary = new InventorySummary();
             $summary->setHotel($hotel);
             $summary->setRoomType($roomType);
@@ -187,202 +180,122 @@ class InventorySummaryService
             $this->entityManager->persist($summary);
         }
 
-        // 统计总房间数
-        $totalRooms = $this->entityManager->getRepository(DailyInventory::class)
+        // 统计该日期的库存数据
+        $inventoryStats = $this->inventoryRepository
             ->createQueryBuilder('di')
-            ->select('COUNT(di.id)')
+            ->select([
+                'COUNT(di.id) as totalCount',
+                'SUM(CASE WHEN di.status = :available THEN 1 ELSE 0 END) as availableCount',
+                'SUM(CASE WHEN di.status = :reserved THEN 1 ELSE 0 END) as reservedCount',
+                'SUM(CASE WHEN di.status = :sold THEN 1 ELSE 0 END) as soldCount',
+                'SUM(CASE WHEN di.status = :pending THEN 1 ELSE 0 END) as pendingCount',
+                'MIN(CASE WHEN di.status = :available AND di.costPrice > 0 THEN di.costPrice ELSE NULL END) as lowestPrice'
+            ])
             ->where('di.hotel = :hotel')
             ->andWhere('di.roomType = :roomType')
             ->andWhere('di.date = :date')
             ->setParameter('hotel', $hotel)
             ->setParameter('roomType', $roomType)
-            ->setParameter('date', $date->format('Y-m-d'))
+            ->setParameter('date', $date)
+            ->setParameter('available', DailyInventoryStatusEnum::AVAILABLE)
+            ->setParameter('reserved', DailyInventoryStatusEnum::RESERVED)
+            ->setParameter('sold', DailyInventoryStatusEnum::SOLD)
+            ->setParameter('pending', DailyInventoryStatusEnum::PENDING)
             ->getQuery()
-            ->getSingleScalarResult();
+            ->getSingleResult();
 
-        $summary->setTotalRooms($totalRooms);
+        // 更新统计数据
+        $summary->setTotalRooms((int)$inventoryStats['totalCount']);
+        $summary->setAvailableRooms((int)$inventoryStats['availableCount']);
+        $summary->setReservedRooms((int)$inventoryStats['reservedCount']);
+        $summary->setSoldRooms((int)$inventoryStats['soldCount']);
+        $summary->setPendingRooms((int)$inventoryStats['pendingCount']);
 
-        // 统计可用房间数
-        $availableRooms = $this->entityManager->getRepository(DailyInventory::class)
-            ->createQueryBuilder('di')
-            ->select('COUNT(di.id)')
-            ->where('di.hotel = :hotel')
-            ->andWhere('di.roomType = :roomType')
-            ->andWhere('di.date = :date')
-            ->andWhere('di.status = :status')
-            ->setParameter('hotel', $hotel)
-            ->setParameter('roomType', $roomType)
-            ->setParameter('date', $date->format('Y-m-d'))
-            ->setParameter('status', DailyInventoryStatusEnum::AVAILABLE)
-            ->getQuery()
-            ->getSingleScalarResult();
+        // 设置最低价格和对应的合同
+        if ($inventoryStats['lowestPrice'] !== null) {
+            $summary->setLowestPrice((string)$inventoryStats['lowestPrice']);
 
-        // 统计预留房间数
-        $reservedRooms = $this->entityManager->getRepository(DailyInventory::class)
-            ->createQueryBuilder('di')
-            ->select('COUNT(di.id)')
-            ->where('di.hotel = :hotel')
-            ->andWhere('di.roomType = :roomType')
-            ->andWhere('di.date = :date')
-            ->andWhere('di.isReserved = :isReserved')
-            ->setParameter('hotel', $hotel)
-            ->setParameter('roomType', $roomType)
-            ->setParameter('date', $date->format('Y-m-d'))
-            ->setParameter('isReserved', true)
-            ->getQuery()
-            ->getSingleScalarResult();
-
-        // 统计已售房间数
-        $soldRooms = $this->entityManager->getRepository(DailyInventory::class)
-            ->createQueryBuilder('di')
-            ->select('COUNT(di.id)')
-            ->where('di.hotel = :hotel')
-            ->andWhere('di.roomType = :roomType')
-            ->andWhere('di.date = :date')
-            ->andWhere('di.status = :status')
-            ->setParameter('hotel', $hotel)
-            ->setParameter('roomType', $roomType)
-            ->setParameter('date', $date->format('Y-m-d'))
-            ->setParameter('status', DailyInventoryStatusEnum::SOLD)
-            ->getQuery()
-            ->getSingleScalarResult();
-
-        // 统计待确认房间数
-        $pendingRooms = $this->entityManager->getRepository(DailyInventory::class)
-            ->createQueryBuilder('di')
-            ->select('COUNT(di.id)')
-            ->where('di.hotel = :hotel')
-            ->andWhere('di.roomType = :roomType')
-            ->andWhere('di.date = :date')
-            ->andWhere('di.status = :status')
-            ->setParameter('hotel', $hotel)
-            ->setParameter('roomType', $roomType)
-            ->setParameter('date', $date->format('Y-m-d'))
-            ->setParameter('status', DailyInventoryStatusEnum::PENDING)
-            ->getQuery()
-            ->getSingleScalarResult();
-
-        // 更新库存统计
-        $summary->setTotalRooms($totalRooms);
-        $summary->setAvailableRooms($availableRooms);
-        $summary->setReservedRooms($reservedRooms);
-        $summary->setSoldRooms($soldRooms);
-        $summary->setPendingRooms($pendingRooms);
-
-        // 获取预警阈值
-        $warningConfig = $this->inventoryConfig->getWarningConfig();
-        $warningThreshold = $warningConfig['warning_threshold'] ?? 10;
-
-        // 设置状态
-        $availablePercentage = $totalRooms > 0 ? ($availableRooms / $totalRooms) * 100 : 0;
-        if ($availableRooms == 0) {
-            $summary->setStatus(InventorySummaryStatusEnum::SOLD_OUT);
-        } elseif ($availablePercentage <= $warningThreshold) {
-            $summary->setStatus(InventorySummaryStatusEnum::WARNING);
-        } else {
-            $summary->setStatus(InventorySummaryStatusEnum::NORMAL);
-        }
-
-        // 查找最低价合同
-        $lowestPrice = $this->findLowestPriceForDate($hotel, $roomType, $date);
-        if ($lowestPrice) {
-            $summary->setLowestPrice($lowestPrice['price']);
-            $contractEntity = $this->entityManager->getRepository(HotelContract::class)->find($lowestPrice['contractId']);
-            if ($contractEntity) {
-                $summary->setLowestContract($contractEntity);
+            // 查找最低价格对应的合同
+            $lowestPriceData = $this->findLowestPriceForDate($hotel, $roomType, $date);
+            if ($lowestPriceData !== null) {
+                $summary->setLowestContract($lowestPriceData['contract']);
             }
+        } else {
+            $summary->setLowestPrice(null);
+            $summary->setLowestContract(null);
         }
 
         $this->entityManager->flush();
     }
 
     /**
-     * 查找指定日期的最低价合同
-     *
-     * @param Hotel $hotel 酒店
-     * @param RoomType $roomType 房型
-     * @param \DateTimeInterface $date 日期
-     * @return array|null 最低价格和合同ID
+     * 查找指定日期的最低价格及对应合同
      */
     private function findLowestPriceForDate(Hotel $hotel, RoomType $roomType, \DateTimeInterface $date): ?array
     {
-        $result = $this->entityManager->getRepository(DailyInventory::class)
+        $result = $this->inventoryRepository
             ->createQueryBuilder('di')
-            ->select('MIN(di.costPrice) as price, IDENTITY(di.contract) as contractId')
+            ->leftJoin('di.contract', 'c')
+            ->addSelect('c')
             ->where('di.hotel = :hotel')
             ->andWhere('di.roomType = :roomType')
             ->andWhere('di.date = :date')
+            ->andWhere('di.status = :status')
+            ->andWhere('di.costPrice > 0')
             ->setParameter('hotel', $hotel)
             ->setParameter('roomType', $roomType)
-            ->setParameter('date', $date->format('Y-m-d'))
-            ->groupBy('di.contract')
-            ->orderBy('price', 'ASC')
+            ->setParameter('date', $date)
+            ->setParameter('status', DailyInventoryStatusEnum::AVAILABLE)
+            ->orderBy('di.costPrice', 'ASC')
             ->setMaxResults(1)
             ->getQuery()
             ->getOneOrNullResult();
 
-        if (!$result || !isset($result['price']) || !isset($result['contractId'])) {
+        if ($result === null) {
             return null;
         }
 
         return [
-            'price' => $result['price'],
-            'contractId' => $result['contractId']
+            'price' => $result->getCostPrice(),
+            'contract' => $result->getContract(),
         ];
     }
 
     /**
-     * 根据预警阈值更新所有库存统计状态
-     *
-     * @param int $warningThreshold 预警阈值(百分比)
-     * @return array 处理结果
+     * 批量更新库存统计状态
      */
     public function updateInventorySummaryStatus(int $warningThreshold = 10): array
     {
-        // 获取所有库存统计
-        $inventorySummaries = $this->entityManager->getRepository(InventorySummary::class)
-            ->findAll();
-
-        if (empty($inventorySummaries)) {
-            return [
-                'success' => true,
-                'message' => '未找到需要更新的库存统计记录',
-                'updated_count' => 0
-            ];
-        }
-
+        $summaries = $this->inventorySummaryRepository->findAll();
         $updatedCount = 0;
 
-        foreach ($inventorySummaries as $summary) {
-            $originalStatus = $summary->getStatus();
+        foreach ($summaries as $summary) {
+            $oldStatus = $summary->getStatus();
+
+            // 重新计算状态（内部方法会自动调用）
             $totalRooms = $summary->getTotalRooms();
             $availableRooms = $summary->getAvailableRooms();
 
-            // 计算状态
             if ($totalRooms <= 0 || $availableRooms <= 0) {
                 $newStatus = InventorySummaryStatusEnum::SOLD_OUT;
-            } elseif (($availableRooms / $totalRooms * 100) <= $warningThreshold) {
+            } elseif (($availableRooms / $totalRooms) * 100 <= $warningThreshold) {
                 $newStatus = InventorySummaryStatusEnum::WARNING;
             } else {
                 $newStatus = InventorySummaryStatusEnum::NORMAL;
             }
 
-            // 如果状态有变化，更新记录
-            if ($originalStatus !== $newStatus) {
+            if ($oldStatus !== $newStatus) {
                 $summary->setStatus($newStatus);
-                $this->entityManager->persist($summary);
                 $updatedCount++;
             }
         }
 
-        if ($updatedCount > 0) {
-            $this->entityManager->flush();
-        }
+        $this->entityManager->flush();
 
         return [
             'success' => true,
-            'message' => sprintf('成功更新%d条库存统计记录状态', $updatedCount),
-            'updated_count' => $updatedCount
+            'updated_count' => $updatedCount,
+            'message' => sprintf('成功更新 %d 条库存统计记录的状态', $updatedCount),
         ];
     }
 }

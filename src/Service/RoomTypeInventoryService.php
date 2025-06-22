@@ -7,6 +7,7 @@ use Tourze\HotelContractBundle\Entity\DailyInventory;
 use Tourze\HotelContractBundle\Entity\HotelContract;
 use Tourze\HotelContractBundle\Enum\DailyInventoryStatusEnum;
 use Tourze\HotelContractBundle\Repository\DailyInventoryRepository;
+use Tourze\HotelContractBundle\Repository\HotelContractRepository;
 use Tourze\HotelProfileBundle\Entity\RoomType;
 use Tourze\HotelProfileBundle\Repository\RoomTypeRepository;
 
@@ -21,6 +22,7 @@ class RoomTypeInventoryService
         private readonly DailyInventoryRepository $inventoryRepository,
         private readonly InventorySummaryService $summaryService,
         private readonly RoomTypeRepository $roomTypeRepository,
+        private readonly HotelContractRepository $hotelContractRepository,
     ) {}
 
     /**
@@ -56,10 +58,10 @@ class RoomTypeInventoryService
             );
 
             // 检查是否已存在
-            $existingInventory = $this->entityManager->getRepository(DailyInventory::class)
+            $existingInventory = $this->inventoryRepository
                 ->findOneBy(['code' => $code]);
 
-            if (!$existingInventory) {
+            if ($existingInventory === null) {
                 $inventory = new DailyInventory();
                 $inventory->setRoomType($roomType)
                     ->setHotel($roomType->getHotel())
@@ -282,8 +284,8 @@ class RoomTypeInventoryService
         float $sellingPrice = 0.0
     ): array {
         // 获取合同和房型
-        $contract = $this->entityManager->getRepository(\Tourze\HotelContractBundle\Entity\HotelContract::class)->find($contractId);
-        if (!$contract) {
+        $contract = $this->hotelContractRepository->find($contractId);
+        if ($contract === null) {
             return [
                 'success' => false,
                 'message' => '合同不存在',
@@ -292,7 +294,7 @@ class RoomTypeInventoryService
         }
 
         $roomType = $this->roomTypeRepository->find($roomTypeId);
-        if (!$roomType) {
+        if ($roomType === null) {
             return [
                 'success' => false,
                 'message' => '房型不存在',
@@ -301,10 +303,10 @@ class RoomTypeInventoryService
         }
 
         // 如果未指定日期，使用合同日期
-        if (!$startDate) {
+        if ($startDate === null) {
             $startDate = $contract->getStartDate();
         }
-        if (!$endDate) {
+        if ($endDate === null) {
             $endDate = $contract->getEndDate();
         }
 

@@ -8,6 +8,7 @@ use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\Mime\Email;
 use Tourze\HotelContractBundle\Entity\HotelContract;
 use Tourze\HotelContractBundle\Enum\ContractStatusEnum;
+use Tourze\HotelContractBundle\Repository\HotelContractRepository;
 
 class ContractService
 {
@@ -15,48 +16,55 @@ class ContractService
         private readonly EntityManagerInterface $entityManager,
         private readonly MailerInterface $mailer,
         private readonly LoggerInterface $logger,
+        private readonly HotelContractRepository $hotelContractRepository,
         private readonly string $adminEmail = 'admin@example.com',
     ) {}
 
     /**
      * 生成合同编号
-     * 格式：HT + 年月日 + 3位序号
+     * 格式：HT + 年月日 + 3位序号（当日第几个合同）
      */
     public function generateContractNumber(): string
     {
         $today = new \DateTimeImmutable();
-        $datePrefix = 'HT' . $today->format('Ymd');
+        $prefix = 'HT' . $today->format('ymd');
 
         // 查询今天已有的合同数量
-        $count = $this->entityManager->getRepository(HotelContract::class)
+        $count = $this->hotelContractRepository
             ->createQueryBuilder('c')
-            ->select('COUNT(c)')
+            ->select('COUNT(c.id)')
             ->where('c.contractNo LIKE :prefix')
-            ->setParameter('prefix', $datePrefix . '%')
+            ->andWhere('DATE(c.createTime) = :today')
+            ->setParameter('prefix', $prefix . '%')
+            ->setParameter('today', $today->format('Y-m-d'))
             ->getQuery()
             ->getSingleScalarResult();
 
-        // 计算序号并生成编号
-        $serialNumber = str_pad($count + 1, 3, '0', STR_PAD_LEFT);
-        return $datePrefix . $serialNumber;
+        $sequence = str_pad((string)($count + 1), 3, '0', STR_PAD_LEFT);
+
+        return $prefix . $sequence;
     }
 
     /**
-     * 审批合同
+     * 审批合同生效
      */
     public function approveContract(HotelContract $contract): void
     {
+        if ($contract->getStatus() !== ContractStatusEnum::PENDING) {
+            throw new \InvalidArgumentException('只有待确认状态的合同才能审批生效');
+        }
+
         $contract->setStatus(ContractStatusEnum::ACTIVE);
         $this->entityManager->flush();
 
-        // 发送审批通知邮件
-        $this->sendContractStatusChangedNotification($contract, '合同已审批生效');
-
-        $this->logger->info('合同已审批生效', [
-            'contractNo' => $contract->getContractNo(),
-            'hotelId' => $contract->getHotel()->getId(),
-            'hotelName' => $contract->getHotel()->getName(),
+        // 记录日志
+        $this->logger->info('合同审批生效', [
+            'contract_id' => $contract->getId(),
+            'contract_no' => $contract->getContractNo(),
         ]);
+
+        // 发送通知
+        $this->sendContractStatusChangedNotification($contract, '审批生效');
     }
 
     /**
@@ -64,19 +72,23 @@ class ContractService
      */
     public function terminateContract(HotelContract $contract, string $terminationReason): void
     {
+        if ($contract->getStatus() === ContractStatusEnum::TERMINATED) {
+            throw new \InvalidArgumentException('合同已经是终止状态');
+        }
+
         $contract->setStatus(ContractStatusEnum::TERMINATED);
         $contract->setTerminationReason($terminationReason);
         $this->entityManager->flush();
 
-        // 发送终止通知邮件
-        $this->sendContractStatusChangedNotification($contract, '合同已终止', $terminationReason);
-
-        $this->logger->info('合同已终止', [
-            'contractNo' => $contract->getContractNo(),
-            'hotelId' => $contract->getHotel()->getId(),
-            'hotelName' => $contract->getHotel()->getName(),
-            'terminationReason' => $terminationReason,
+        // 记录日志
+        $this->logger->info('合同终止', [
+            'contract_id' => $contract->getId(),
+            'contract_no' => $contract->getContractNo(),
+            'reason' => $terminationReason,
         ]);
+
+        // 发送通知
+        $this->sendContractStatusChangedNotification($contract, '终止', $terminationReason);
     }
 
     /**
@@ -88,12 +100,12 @@ class ContractService
         $contract->setPriority($newPriority);
         $this->entityManager->flush();
 
-        $this->logger->info('合同优先级已调整', [
-            'contractNo' => $contract->getContractNo(),
-            'hotelId' => $contract->getHotel()->getId(),
-            'hotelName' => $contract->getHotel()->getName(),
-            'oldPriority' => $oldPriority,
-            'newPriority' => $newPriority,
+        // 记录日志
+        $this->logger->info('调整合同优先级', [
+            'contract_id' => $contract->getId(),
+            'contract_no' => $contract->getContractNo(),
+            'old_priority' => $oldPriority,
+            'new_priority' => $newPriority,
         ]);
     }
 
@@ -102,34 +114,41 @@ class ContractService
      */
     public function sendContractCreatedNotification(HotelContract $contract): void
     {
-        $hotelName = $contract->getHotel()->getName();
-        $contractNo = $contract->getContractNo();
-
-        $email = (new Email())
-            ->from('noreply@hotel-booking-system.com')
-            ->to($this->adminEmail)
-            ->subject("新合同创建通知: $contractNo")
-            ->html("
-                <p>尊敬的管理员：</p>
-                <p>系统已创建新的酒店合同，详情如下：</p>
-                <ul>
-                    <li>合同编号：{$contractNo}</li>
-                    <li>酒店名称：{$hotelName}</li>
-                    <li>合同类型：{$contract->getContractType()->getLabel()}</li>
-                    <li>开始日期：{$contract->getStartDate()->format('Y-m-d')}</li>
-                    <li>结束日期：{$contract->getEndDate()->format('Y-m-d')}</li>
-                    <li>总金额：{$contract->getTotalAmount()} 元</li>
-                </ul>
-                <p>请及时审核并确认合同信息。</p>
-                <p>此邮件由系统自动发送，请勿回复。</p>
-            ");
-
         try {
+            $email = (new Email())
+                ->from('system@hotel.com')
+                ->to($this->adminEmail)
+                ->subject('新合同创建通知')
+                ->html(sprintf(
+                    '<h3>合同创建通知</h3>
+                    <p><strong>合同编号</strong>: %s</p>
+                    <p><strong>酒店</strong>: %s</p>
+                    <p><strong>合同类型</strong>: %s</p>
+                    <p><strong>开始日期</strong>: %s</p>
+                    <p><strong>结束日期</strong>: %s</p>
+                    <p><strong>总房间数</strong>: %d</p>
+                    <p><strong>总金额</strong>: ¥%s</p>
+                    <p><strong>创建时间</strong>: %s</p>',
+                    $contract->getContractNo(),
+                    $contract->getHotel()?->getName() ?? '未知酒店',
+                    $contract->getContractType()->getLabel(),
+                    $contract->getStartDate()?->format('Y-m-d') ?? '未设置',
+                    $contract->getEndDate()?->format('Y-m-d') ?? '未设置',
+                    $contract->getTotalRooms(),
+                    $contract->getTotalAmount(),
+                    $contract->getCreateTime()?->format('Y-m-d H:i:s') ?? '未知时间'
+                ));
+
             $this->mailer->send($email);
-            $this->logger->info('合同创建通知邮件已发送', ['contractNo' => $contractNo]);
-        } catch (\Throwable $e) {
-            $this->logger->error('合同创建通知邮件发送失败', [
-                'contractNo' => $contractNo,
+
+            $this->logger->info('合同创建通知已发送', [
+                'contract_id' => $contract->getId(),
+                'contract_no' => $contract->getContractNo(),
+            ]);
+        } catch (\Exception $e) {
+            $this->logger->error('发送合同创建通知失败', [
+                'contract_id' => $contract->getId(),
+                'contract_no' => $contract->getContractNo(),
                 'error' => $e->getMessage(),
             ]);
         }
@@ -140,34 +159,35 @@ class ContractService
      */
     public function sendContractUpdatedNotification(HotelContract $contract): void
     {
-        $hotelName = $contract->getHotel()->getName();
-        $contractNo = $contract->getContractNo();
-
-        $email = (new Email())
-            ->from('noreply@hotel-booking-system.com')
-            ->to($this->adminEmail)
-            ->subject("合同更新通知: $contractNo")
-            ->html("
-                <p>尊敬的管理员：</p>
-                <p>系统合同信息已更新，详情如下：</p>
-                <ul>
-                    <li>合同编号：{$contractNo}</li>
-                    <li>酒店名称：{$hotelName}</li>
-                    <li>合同类型：{$contract->getContractType()->getLabel()}</li>
-                    <li>合同状态：{$contract->getStatus()->getLabel()}</li>
-                    <li>开始日期：{$contract->getStartDate()->format('Y-m-d')}</li>
-                    <li>结束日期：{$contract->getEndDate()->format('Y-m-d')}</li>
-                    <li>总金额：{$contract->getTotalAmount()} 元</li>
-                </ul>
-                <p>此邮件由系统自动发送，请勿回复。</p>
-            ");
-
         try {
+            $email = (new Email())
+                ->from('system@hotel.com')
+                ->to($this->adminEmail)
+                ->subject('合同更新通知')
+                ->html(sprintf(
+                    '<h3>合同更新通知</h3>
+                    <p><strong>合同编号</strong>: %s</p>
+                    <p><strong>酒店</strong>: %s</p>
+                    <p><strong>当前状态</strong>: %s</p>
+                    <p><strong>更新时间</strong>: %s</p>
+                    
+                    <p>合同信息已更新，请查看详情。</p>',
+                    $contract->getContractNo(),
+                    $contract->getHotel()?->getName() ?? '未知酒店',
+                    $contract->getStatus()->getLabel(),
+                    $contract->getUpdateTime()?->format('Y-m-d H:i:s') ?? '未知时间'
+                ));
+
             $this->mailer->send($email);
-            $this->logger->info('合同更新通知邮件已发送', ['contractNo' => $contractNo]);
-        } catch (\Throwable $e) {
-            $this->logger->error('合同更新通知邮件发送失败', [
-                'contractNo' => $contractNo,
+
+            $this->logger->info('合同更新通知已发送', [
+                'contract_id' => $contract->getId(),
+                'contract_no' => $contract->getContractNo(),
+            ]);
+        } catch (\Exception $e) {
+            $this->logger->error('发送合同更新通知失败', [
+                'contract_id' => $contract->getId(),
+                'contract_no' => $contract->getContractNo(),
                 'error' => $e->getMessage(),
             ]);
         }
@@ -178,38 +198,36 @@ class ContractService
      */
     private function sendContractStatusChangedNotification(HotelContract $contract, string $action, ?string $reason = null): void
     {
-        $hotelName = $contract->getHotel()->getName();
-        $contractNo = $contract->getContractNo();
-        $statusText = $contract->getStatus()->getLabel();
-
-        $reasonHtml = $reason ? "<p>变更原因：{$reason}</p>" : '';
-
-        $email = (new Email())
-            ->from('noreply@hotel-booking-system.com')
-            ->to($this->adminEmail)
-            ->subject("合同状态变更通知: $contractNo - $statusText")
-            ->html("
-                <p>尊敬的管理员：</p>
-                <p>系统合同状态已变更，详情如下：</p>
-                <ul>
-                    <li>合同编号：{$contractNo}</li>
-                    <li>酒店名称：{$hotelName}</li>
-                    <li>状态变更：{$action}</li>
-                    <li>当前状态：{$statusText}</li>
-                </ul>
-                {$reasonHtml}
-                <p>此邮件由系统自动发送，请勿回复。</p>
-            ");
-
         try {
+            $reasonText = $reason !== null ? sprintf('<p><strong>原因</strong>: %s</p>', $reason) : '';
+
+            $email = (new Email())
+                ->from('system@hotel.com')
+                ->to($this->adminEmail)
+                ->subject(sprintf('合同%s通知', $action))
+                ->html(sprintf(
+                    '<h3>合同%s通知</h3>
+                    <p><strong>合同编号</strong>: %s</p>
+                    <p><strong>酒店</strong>: %s</p>
+                    <p><strong>操作</strong>: %s</p>
+                    <p><strong>当前状态</strong>: %s</p>
+                    %s
+                    <p><strong>操作时间</strong>: %s</p>',
+                    $action,
+                    $contract->getContractNo(),
+                    $contract->getHotel()?->getName() ?? '未知酒店',
+                    $action,
+                    $contract->getStatus()->getLabel(),
+                    $reasonText,
+                    (new \DateTimeImmutable())->format('Y-m-d H:i:s')
+                ));
+
             $this->mailer->send($email);
-            $this->logger->info('合同状态变更通知邮件已发送', [
-                'contractNo' => $contractNo,
-                'status' => $statusText,
-            ]);
-        } catch (\Throwable $e) {
-            $this->logger->error('合同状态变更通知邮件发送失败', [
-                'contractNo' => $contractNo,
+        } catch (\Exception $e) {
+            $this->logger->error('发送合同状态变更通知失败', [
+                'contract_id' => $contract->getId(),
+                'contract_no' => $contract->getContractNo(),
+                'action' => $action,
                 'error' => $e->getMessage(),
             ]);
         }

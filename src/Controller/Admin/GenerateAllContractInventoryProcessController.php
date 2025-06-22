@@ -8,22 +8,26 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 use Tourze\HotelContractBundle\Entity\DailyInventory;
-use Tourze\HotelContractBundle\Entity\HotelContract;
-use Tourze\HotelContractBundle\Entity\RoomType;
 use Tourze\HotelContractBundle\Enum\ContractStatusEnum;
 use Tourze\HotelContractBundle\Enum\DailyInventoryStatusEnum;
+use Tourze\HotelContractBundle\Repository\DailyInventoryRepository;
+use Tourze\HotelContractBundle\Repository\HotelContractRepository;
+use Tourze\HotelProfileBundle\Entity\RoomType;
+use Tourze\HotelProfileBundle\Repository\RoomTypeRepository;
 
 /**
  * 为所有生效合同生成库存处理控制器
  */
-#[Route('/admin/room-type-inventory/generate-all-contract-process', name: 'admin_room_type_inventory_generate_all_contract_process', methods: ['POST'])]
 class GenerateAllContractInventoryProcessController extends AbstractController
 {
     public function __construct(
         private readonly EntityManagerInterface $entityManager,
-    ) {
-    }
+        private readonly HotelContractRepository $hotelContractRepository,
+        private readonly RoomTypeRepository $roomTypeRepository,
+        private readonly DailyInventoryRepository $dailyInventoryRepository,
+    ) {}
 
+    #[Route('/admin/room-type-inventory/generate-all-contract-process', name: 'admin_room_type_inventory_generate_all_contract_process', methods: ['POST'])]
     public function __invoke(Request $request): Response
     {
         // 获取参数
@@ -35,7 +39,7 @@ class GenerateAllContractInventoryProcessController extends AbstractController
         $this->entityManager->getConnection()->beginTransaction();
         try {
             // 获取所有生效的合同
-            $activeContracts = $this->entityManager->getRepository(HotelContract::class)
+            $activeContracts = $this->hotelContractRepository
                 ->createQueryBuilder('c')
                 ->where('c.status = :status')
                 ->andWhere('c.startDate <= :endDate')
@@ -58,10 +62,10 @@ class GenerateAllContractInventoryProcessController extends AbstractController
 
             foreach ($activeContracts as $contract) {
                 $processedContracts++;
-                
+
                 // 获取合同关联的房型
                 /** @var RoomType[] $roomTypes */
-                $roomTypes = $this->entityManager->getRepository(RoomType::class)
+                $roomTypes = $this->roomTypeRepository
                     ->createQueryBuilder('rt')
                     ->join('rt.hotelContracts', 'c')
                     ->where('c.id = :contractId')
@@ -76,7 +80,7 @@ class GenerateAllContractInventoryProcessController extends AbstractController
                 // 为每个房型生成库存记录
                 foreach ($roomTypes as $roomType) {
                     $currentDate = clone $startDate;
-                    
+
                     while ($currentDate <= $endDate) {
                         // 检查日期是否在合同有效期内
                         if ($currentDate < $contract->getStartDate() || $currentDate > $contract->getEndDate()) {
@@ -85,14 +89,14 @@ class GenerateAllContractInventoryProcessController extends AbstractController
                         }
 
                         // 检查是否已存在库存记录
-                        $existingInventory = $this->entityManager->getRepository(DailyInventory::class)
+                        $existingInventory = $this->dailyInventoryRepository
                             ->findOneBy([
                                 'roomType' => $roomType,
                                 'date' => $currentDate,
                                 'contract' => $contract,
                             ]);
 
-                        if ($existingInventory) {
+                        if ($existingInventory !== null) {
                             $totalSkipped++;
                             $currentDate = $currentDate->modify('+1 day');
                             continue;
@@ -104,13 +108,11 @@ class GenerateAllContractInventoryProcessController extends AbstractController
                             $inventory->setRoomType($roomType);
                             $inventory->setDate($currentDate);
                             $inventory->setContract($contract);
-                            $inventory->setTotalRooms($roomType->getDefaultInventory() ?? 10);
-                            $inventory->setAvailableRooms($roomType->getDefaultInventory() ?? 10);
-                            $inventory->setReservedRooms(0);
-                            $inventory->setSoldRooms(0);
                             $inventory->setStatus(DailyInventoryStatusEnum::AVAILABLE);
-                            $inventory->setBasePrice($roomType->getDefaultPrice() ?? '0');
-                            $inventory->setSellPrice($roomType->getDefaultPrice() ?? '0');
+                            $inventory->setCostPrice('0');
+                            $inventory->setSellingPrice('0');
+                            $inventory->setCode(sprintf('%s-%s-%s', $roomType->getId(), $contract->getId(), $currentDate->format('Ymd')));
+                            $inventory->setHotel($roomType->getHotel());
 
                             $this->entityManager->persist($inventory);
                             $totalGenerated++;
@@ -133,10 +135,9 @@ class GenerateAllContractInventoryProcessController extends AbstractController
                 $totalSkipped,
                 $totalFailed
             ));
-
         } catch (\Exception $e) {
             $this->entityManager->getConnection()->rollBack();
-            $this->addFlash('error', '生成库存时发生错误: ' . $e->getMessage());
+            $this->addFlash('danger', '生成库存时发生错误: ' . $e->getMessage());
         }
 
         return $this->redirectToRoute('admin');

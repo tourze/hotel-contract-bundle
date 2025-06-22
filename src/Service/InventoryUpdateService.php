@@ -250,7 +250,7 @@ class InventoryUpdateService
 
     /**
      * 批量清除日期范围内的合同关联
-     * 
+     *
      * @param int $hotelId 酒店ID
      * @param int|null $roomTypeId 房型ID (可选)
      * @param \DateTimeInterface $startDate 开始日期
@@ -270,17 +270,17 @@ class InventoryUpdateService
             ->where('di.hotel = :hotelId')
             ->setParameter('hotelId', $hotelId);
 
-        if ($startDate) {
+        if ($startDate !== null) {
             $qb->andWhere('di.date >= :startDate')
                 ->setParameter('startDate', $startDate);
         }
 
-        if ($endDate) {
+        if ($endDate !== null) {
             $qb->andWhere('di.date <= :endDate')
                 ->setParameter('endDate', $endDate);
         }
 
-        if ($roomTypeId) {
+        if ($roomTypeId !== null) {
             $qb->andWhere('di.roomType = :roomTypeId')
                 ->setParameter('roomTypeId', $roomTypeId);
         }

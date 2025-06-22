@@ -25,13 +25,13 @@ class AdminMenu implements MenuProviderInterface
 
     public function __invoke(ItemInterface $item): void
     {
-        if (!$item->getChild('酒店管理')) {
+        if ($item->getChild('酒店管理') === null) {
             $item->addChild('酒店管理');
         }
         $appMenu = $item->getChild('酒店管理');
         $appMenu->addChild('合同管理')->setUri($this->linkGenerator->getCurdListPage(HotelContract::class))->setAttribute('icon', 'fas fa-file-contract');
 
-        if (!$item->getChild('库存管理')) {
+        if ($item->getChild('库存管理') === null) {
             $item->addChild('库存管理');
         }
         $appMenu = $item->getChild('库存管理');

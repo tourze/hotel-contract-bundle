@@ -4,8 +4,11 @@ namespace Tourze\HotelContractBundle\Service;
 
 use Doctrine\ORM\EntityManagerInterface;
 use Tourze\HotelContractBundle\Entity\DailyInventory;
-use Tourze\HotelContractBundle\Entity\InventorySummary;
+use Tourze\HotelContractBundle\Enum\DailyInventoryStatusEnum;
+use Tourze\HotelContractBundle\Enum\InventorySummaryStatusEnum;
+use Tourze\HotelContractBundle\Repository\InventorySummaryRepository;
 use Tourze\HotelProfileBundle\Entity\RoomType;
+use Tourze\HotelProfileBundle\Repository\RoomTypeRepository;
 
 /**
  * 库存查询服务
@@ -14,10 +17,12 @@ class InventoryQueryService
 {
     public function __construct(
         private readonly EntityManagerInterface $entityManager,
+        private readonly RoomTypeRepository $roomTypeRepository,
+        private readonly InventorySummaryRepository $inventorySummaryRepository,
     ) {}
 
     /**
-     * 获取库存信息
+     * 获取指定房型在特定日期范围内的库存信息
      */
     public function getInventoryData(
         int $roomTypeId,
@@ -25,180 +30,172 @@ class InventoryQueryService
         string $checkOutDate,
         int $roomCount
     ): array {
-        // 查找房型
-        $roomType = $this->entityManager->getRepository(RoomType::class)->find($roomTypeId);
-        if (!$roomType) {
-            throw new \Exception('房型不存在');
+        $roomType = $this->roomTypeRepository->find($roomTypeId);
+        if ($roomType === null) {
+            return [
+                'success' => false,
+                'message' => '房型不存在',
+                'data' => [],
+            ];
         }
 
-        // 获取日期范围内的库存信息
-        $startDate = new \DateTimeImmutable($checkInDate);
-        $endDate = new \DateTimeImmutable($checkOutDate);
+        try {
+            $startDate = new \DateTimeImmutable($checkInDate);
+            $endDate = new \DateTimeImmutable($checkOutDate);
+        } catch (\Exception $e) {
+            return [
+                'success' => false,
+                'message' => '日期格式错误',
+                'data' => [],
+            ];
+        }
 
-        $inventoryData = [];
+        // 获取每日库存信息
+        $dailyInventories = [];
         $currentDate = clone $startDate;
 
         while ($currentDate < $endDate) {
             $dayData = $this->getDayInventoryData($roomType, $currentDate, $roomCount);
-            $inventoryData[] = $dayData;
+            $dailyInventories[] = $dayData;
             $currentDate = $currentDate->modify('+1 day');
         }
 
-        // 检查是否所有日期都有足够库存且有价格
-        $canBookAll = array_reduce($inventoryData, function ($carry, $item) {
-            return $carry && $item['can_book'] && !empty($item['daily_inventories']);
-        }, true);
+        // 标记默认选择的库存
+        $this->markDefaultInventory($dailyInventories, $roomCount);
 
         return [
-            'room_type' => $this->formatRoomTypeData($roomType),
-            'inventory' => $inventoryData,
-            'total_nights' => count($inventoryData),
-            'can_book_all' => $canBookAll,
+            'success' => true,
+            'message' => '查询成功',
+            'data' => [
+                'roomType' => $this->formatRoomTypeData($roomType),
+                'checkInDate' => $checkInDate,
+                'checkOutDate' => $checkOutDate,
+                'roomCount' => $roomCount,
+                'dailyInventories' => $dailyInventories,
+                'totalDays' => count($dailyInventories),
+            ],
         ];
     }
 
     /**
-     * 获取单日库存数据
+     * 获取指定日期的库存数据
      */
     private function getDayInventoryData(RoomType $roomType, \DateTimeInterface $date, int $roomCount): array
     {
-        $dateStr = $date->format('Y-m-d');
-        $conn = $this->entityManager->getConnection();
+        // 获取库存汇总信息
+        $summary = $this->inventorySummaryRepository
+            ->findByHotelRoomTypeAndDate(
+                $roomType->getHotel()->getId(),
+                $roomType->getId(),
+                $date
+            );
 
-        // 获取库存汇总信息（数量）
-        $inventorySummary = $this->entityManager->getRepository(InventorySummary::class)
-            ->findOneBy([
-                'roomType' => $roomType,
-                'date' => $date
-            ]);
+        // 获取该日具体的库存记录
+        $inventories = $this->entityManager->createQueryBuilder()
+            ->select('di')
+            ->from(DailyInventory::class, 'di')
+            ->where('di.roomType = :roomType')
+            ->andWhere('di.date = :date')
+            ->andWhere('di.status = :status')
+            ->setParameter('roomType', $roomType)
+            ->setParameter('date', $date)
+            ->setParameter('status', DailyInventoryStatusEnum::AVAILABLE)
+            ->orderBy('di.costPrice', 'ASC')
+            ->getQuery()
+            ->getResult();
 
-        // 获取该日期所有可用的DailyInventory记录
-        $sql = "SELECT * FROM daily_inventory 
-                WHERE room_type_id = :roomTypeId 
-                AND date = :date 
-                AND status = :status 
-                ORDER BY profit_rate DESC, cost_price ASC";
-
-        $stmt = $conn->executeQuery($sql, [
-            'roomTypeId' => $roomType->getId(),
-            'date' => $dateStr,
-            'status' => 'available'
-        ]);
-
-        $results = $stmt->fetchAllAssociative();
-
-        // 将结果转换为实体对象
-        $dailyInventories = [];
-        foreach ($results as $row) {
-            $dailyInventory = $this->entityManager->find(DailyInventory::class, $row['id']);
-            if ($dailyInventory) {
-                $dailyInventories[] = $dailyInventory;
-            }
+        // 格式化库存数据
+        $inventoryData = [];
+        foreach ($inventories as $inventory) {
+            $inventoryData[] = $this->formatDailyInventoryData($inventory);
         }
 
-        // 计算实际可用房间数量
-        $actualAvailableRooms = count($dailyInventories);
+        // 获取最低价格和可售数量
+        $availableCount = count($inventories);
+        $lowestPrice = null;
+        $highestPrice = null;
 
-        // 判断是否可以预订：必须有足够的可用库存
-        $canBook = $actualAvailableRooms >= $roomCount;
+        if (!empty($inventories)) {
+            $prices = array_map(function (DailyInventory $inv) {
+                return (float)$inv->getSellingPrice();
+            }, $inventories);
 
-        // 如果库存不足，获取所有库存（包括已占用的）用于展示
-        $allDailyInventories = [];
-        if (!$canBook) {
-            $sql2 = "SELECT * FROM daily_inventory
-                     WHERE room_type_id = :roomTypeId
-                     AND date = :date
-                     ORDER BY profit_rate DESC, cost_price ASC";
-
-            $stmt2 = $conn->executeQuery($sql2, [
-                'roomTypeId' => $roomType->getId(),
-                'date' => $dateStr
-            ]);
-
-            $results2 = $stmt2->fetchAllAssociative();
-
-            // 将结果转换为实体对象
-            foreach ($results2 as $row) {
-                $dailyInventory = $this->entityManager->find(DailyInventory::class, $row['id']);
-                if ($dailyInventory) {
-                    $allDailyInventories[] = $dailyInventory;
-                }
-            }
+            $lowestPrice = min($prices);
+            $highestPrice = max($prices);
         }
 
-        $dayData = [
-            'date' => $dateStr,
-            'date_display' => $date->format('m月d日'),
-            'day_of_week' => $this->getDayOfWeekName($date->format('w')),
-            'total_rooms' => $inventorySummary ? $inventorySummary->getTotalRooms() : $actualAvailableRooms,
-            'available_rooms' => $actualAvailableRooms,
-            'booked_rooms' => $inventorySummary ? ($inventorySummary->getSoldRooms() + $inventorySummary->getPendingRooms()) : 0,
-            'can_book' => $canBook,
-            'requested_rooms' => $roomCount,
-            'shortage' => max(0, $roomCount - $actualAvailableRooms), // 缺少的房间数
-            'daily_inventories' => []
+        return [
+            'date' => $date->format('Y-m-d'),
+            'dayOfWeek' => $this->getDayOfWeekName($date->format('w')),
+            'summary' => [
+                'totalRooms' => $summary?->getTotalRooms() ?? 0,
+                'availableRooms' => $summary?->getAvailableRooms() ?? $availableCount,
+                'reservedRooms' => $summary?->getReservedRooms() ?? 0,
+                'soldRooms' => $summary?->getSoldRooms() ?? 0,
+                'status' => $summary?->getStatus() ?? InventorySummaryStatusEnum::NORMAL,
+                'statusLabel' => $summary?->getStatus()->getLabel() ?? InventorySummaryStatusEnum::NORMAL->getLabel(),
+            ],
+            'availableCount' => $availableCount,
+            'requestedCount' => $roomCount,
+            'isAvailable' => $availableCount >= $roomCount,
+            'priceRange' => [
+                'lowest' => $lowestPrice,
+                'highest' => $highestPrice,
+                'currency' => 'CNY',
+            ],
+            'inventories' => $inventoryData,
+            'isDefault' => false, // 由外部方法设置
         ];
-
-        // 选择要展示的库存：如果可以预订，展示可用的；否则展示所有的
-        $inventoriesToShow = $canBook ? $dailyInventories : $allDailyInventories;
-
-        // 添加每个DailyInventory的详细信息
-        foreach ($inventoriesToShow as $dailyInventory) {
-            $inventoryData = $this->formatDailyInventoryData($dailyInventory);
-            $dayData['daily_inventories'][] = $inventoryData;
-        }
-
-        // 如果可以预订，标记默认选择的库存
-        if ($canBook) {
-            $this->markDefaultInventory($dayData['daily_inventories'], $roomCount);
-        }
-
-        return $dayData;
     }
 
     /**
-     * 格式化DailyInventory数据
+     * 格式化日库存数据
      */
     private function formatDailyInventoryData(DailyInventory $dailyInventory): array
     {
-        $sellingPrice = (float)$dailyInventory->getSellingPrice();
-        $costPrice = (float)$dailyInventory->getCostPrice();
-        $profit = $sellingPrice - $costPrice;
-
         return [
             'id' => $dailyInventory->getId(),
             'code' => $dailyInventory->getCode(),
-            'cost_price' => $dailyInventory->getCostPrice(),
-            'selling_price' => $dailyInventory->getSellingPrice(),
-            'profit_rate' => $dailyInventory->getProfitRate(),
-            'profit_amount' => $profit,
-            'contract_no' => $dailyInventory->getContract() ? $dailyInventory->getContract()->getContractNo() : '无合同',
-            'status' => $dailyInventory->getStatus()->value,
-            'status_label' => $dailyInventory->getStatus()->getLabel(),
+            'costPrice' => (float)$dailyInventory->getCostPrice(),
+            'sellingPrice' => (float)$dailyInventory->getSellingPrice(),
+            'profitRate' => (float)$dailyInventory->getProfitRate(),
+            'status' => $dailyInventory->getStatus(),
+            'statusLabel' => $dailyInventory->getStatus()->getLabel(),
+            'isReserved' => $dailyInventory->isReserved(),
+            'contract' => [
+                'id' => $dailyInventory->getContract()?->getId(),
+                'contractNo' => $dailyInventory->getContract()?->getContractNo(),
+                'priority' => $dailyInventory->getContract()?->getPriority(),
+            ],
+            'isSelected' => false, // 由外部设置
         ];
     }
 
     /**
-     * 标记默认库存（按利润率排序，选择指定数量）
+     * 标记默认选择的库存
      */
     private function markDefaultInventory(array &$dailyInventories, int $roomCount = 1): void
     {
-        if (empty($dailyInventories)) {
-            return;
-        }
+        foreach ($dailyInventories as &$dayData) {
+            if (!$dayData['isAvailable']) {
+                continue;
+            }
 
-        // 按利润率从高到低排序
-        usort($dailyInventories, function ($a, $b) {
-            $profitRateA = (float)$a['profit_rate'];
-            $profitRateB = (float)$b['profit_rate'];
-            return $profitRateB <=> $profitRateA;
-        });
+            // 选择价格最低的库存
+            $selectedCount = 0;
+            foreach ($dayData['inventories'] as &$inventory) {
+                if ($selectedCount < $roomCount) {
+                    $inventory['isSelected'] = true;
+                    $selectedCount++;
+                } else {
+                    break;
+                }
+            }
 
-        // 标记前N个为默认选择（N为房间数量）
-        $selectCount = min($roomCount, count($dailyInventories));
-
-        foreach ($dailyInventories as $index => &$inventory) {
-            $inventory['is_default'] = ($index < $selectCount);
+            // 标记为默认选择
+            if ($selectedCount === $roomCount) {
+                $dayData['isDefault'] = true;
+            }
         }
     }
 
@@ -210,9 +207,10 @@ class InventoryQueryService
         return [
             'id' => $roomType->getId(),
             'name' => $roomType->getName(),
-            'hotel_name' => $roomType->getHotel()->getName(),
-            'bed_type' => $roomType->getBedType(),
-            'max_guests' => $roomType->getMaxGuests(),
+            'hotel' => [
+                'id' => $roomType->getHotel()->getId(),
+                'name' => $roomType->getHotel()->getName(),
+            ],
         ];
     }
 
@@ -221,7 +219,16 @@ class InventoryQueryService
      */
     private function getDayOfWeekName(string $dayOfWeek): string
     {
-        $days = ['日', '一', '二', '三', '四', '五', '六'];
-        return '周' . $days[(int)$dayOfWeek];
+        $names = [
+            '0' => '周日',
+            '1' => '周一',
+            '2' => '周二',
+            '3' => '周三',
+            '4' => '周四',
+            '5' => '周五',
+            '6' => '周六',
+        ];
+
+        return $names[$dayOfWeek] ?? '未知';
     }
 }

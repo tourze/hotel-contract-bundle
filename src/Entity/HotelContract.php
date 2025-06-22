@@ -293,7 +293,7 @@ class HotelContract implements Stringable
 
     /**
      * 计算合同总售价
-     * 
+     *
      * @return float
      */
     public function getTotalSellingAmount(): float
@@ -309,7 +309,7 @@ class HotelContract implements Stringable
 
     /**
      * 计算合同总成本
-     * 
+     *
      * @return float
      */
     public function getTotalCostAmount(): float
@@ -325,7 +325,7 @@ class HotelContract implements Stringable
 
     /**
      * 计算合同利润率
-     * 
+     *
      * @return float
      */
     public function getProfitRate(): float

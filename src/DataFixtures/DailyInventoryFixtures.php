@@ -69,8 +69,7 @@ class DailyInventoryFixtures extends Fixture implements DependentFixtureInterfac
                 $endDate = new \DateTimeImmutable($contract->getEndDate()->format('Y-m-d'));
 
                 // 只生成7天的库存用于测试
-                $endDate = clone $startDate;
-                $endDate->modify('+6 days');
+                $endDate = $startDate->modify('+6 days');
 
                 // 为每一天创建库存
                 $currentDate = clone $startDate;
@@ -108,7 +107,7 @@ class DailyInventoryFixtures extends Fixture implements DependentFixtureInterfac
                     }
 
                     // 移动到下一天
-                    $currentDate->modify('+1 day');
+                    $currentDate = $currentDate->modify('+1 day');
                 }
             }
         }

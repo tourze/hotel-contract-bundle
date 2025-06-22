@@ -43,9 +43,10 @@ class HotelContractExtensionTest extends TestCase
 
     public function test_load_returnsVoid(): void
     {
-        $result = $this->extension->load([], $this->container);
+        $this->extension->load([], $this->container);
         
-        $this->assertNull($result);
+        // load() method returns void, so we just check it doesn't throw exception
+        $this->expectNotToPerformAssertions();
     }
 
     public function test_load_acceptsArrayOfConfigs(): void

@@ -40,7 +40,8 @@ class InventorySummaryServiceTest extends TestCase
             $this->entityManager,
             $this->inventoryRepository,
             $this->inventorySummaryRepository,
-            $this->inventoryConfig
+            $this->createMock(\Tourze\HotelProfileBundle\Repository\HotelRepository::class),
+            $this->createMock(\Tourze\HotelProfileBundle\Repository\RoomTypeRepository::class)
         );
     }
 

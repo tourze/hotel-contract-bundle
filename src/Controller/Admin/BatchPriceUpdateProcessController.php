@@ -7,20 +7,21 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
-use Tourze\HotelContractBundle\Entity\DailyInventory;
-use Tourze\HotelContractBundle\Entity\RoomType;
+use Tourze\HotelContractBundle\Repository\DailyInventoryRepository;
+use Tourze\HotelProfileBundle\Repository\RoomTypeRepository;
 
 /**
  * 批量更新价格处理控制器
  */
-#[Route('/admin/room-type-inventory/batch-price-update-process', name: 'admin_room_type_inventory_batch_price_update_process', methods: ['POST'])]
 class BatchPriceUpdateProcessController extends AbstractController
 {
     public function __construct(
         private readonly EntityManagerInterface $entityManager,
-    ) {
-    }
+        private readonly RoomTypeRepository $roomTypeRepository,
+        private readonly DailyInventoryRepository $dailyInventoryRepository,
+    ) {}
 
+    #[Route('/admin/room-type-inventory/batch-price-update-process', name: 'admin_room_type_inventory_batch_price_update_process', methods: ['POST'])]
     public function __invoke(Request $request): Response
     {
         // 获取表单参数
@@ -32,8 +33,8 @@ class BatchPriceUpdateProcessController extends AbstractController
         $updateType = $request->request->get('update_type', 'both'); // both, base_only, sell_only
 
         // 验证参数
-        if (!$roomTypeId || !$startDateStr || !$endDateStr) {
-            $this->addFlash('error', '请填写所有必填字段');
+        if ($roomTypeId === 0 || !$startDateStr || !$endDateStr) {
+            $this->addFlash('danger', '请填写所有必填字段');
             return $this->redirectToRoute('admin_room_type_inventory_batch_price_update');
         }
 
@@ -41,14 +42,14 @@ class BatchPriceUpdateProcessController extends AbstractController
             $startDate = new \DateTimeImmutable($startDateStr);
             $endDate = new \DateTimeImmutable($endDateStr);
         } catch (\Exception $e) {
-            $this->addFlash('error', '日期格式不正确');
+            $this->addFlash('danger', '日期格式不正确');
             return $this->redirectToRoute('admin_room_type_inventory_batch_price_update');
         }
 
         // 获取房型
-        $roomType = $this->entityManager->getRepository(RoomType::class)->find($roomTypeId);
-        if (!$roomType) {
-            $this->addFlash('error', '房型不存在');
+        $roomType = $this->roomTypeRepository->find($roomTypeId);
+        if ($roomType === null) {
+            $this->addFlash('danger', '房型不存在');
             return $this->redirectToRoute('admin_room_type_inventory_batch_price_update');
         }
 
@@ -56,7 +57,7 @@ class BatchPriceUpdateProcessController extends AbstractController
         $this->entityManager->getConnection()->beginTransaction();
         try {
             // 查询需要更新的库存记录
-            $qb = $this->entityManager->getRepository(DailyInventory::class)
+            $qb = $this->dailyInventoryRepository
                 ->createQueryBuilder('di')
                 ->where('di.roomType = :roomType')
                 ->andWhere('di.date >= :startDate')
@@ -73,12 +74,12 @@ class BatchPriceUpdateProcessController extends AbstractController
 
                 // 根据更新类型更新价格
                 if (($updateType === 'both' || $updateType === 'base_only') && $basePrice !== null && $basePrice !== '') {
-                    $inventory->setBasePrice($basePrice);
+                    $inventory->setCostPrice($basePrice);
                     $updated = true;
                 }
 
                 if (($updateType === 'both' || $updateType === 'sell_only') && $sellPrice !== null && $sellPrice !== '') {
-                    $inventory->setSellPrice($sellPrice);
+                    $inventory->setSellingPrice($sellPrice);
                     $updated = true;
                 }
 
@@ -91,10 +92,9 @@ class BatchPriceUpdateProcessController extends AbstractController
             $this->entityManager->getConnection()->commit();
 
             $this->addFlash('success', sprintf('成功更新 %d 条库存记录的价格', $updateCount));
-
         } catch (\Exception $e) {
             $this->entityManager->getConnection()->rollBack();
-            $this->addFlash('error', '更新价格时发生错误: ' . $e->getMessage());
+            $this->addFlash('danger', '更新价格时发生错误: ' . $e->getMessage());
         }
 
         return $this->redirectToRoute('admin');

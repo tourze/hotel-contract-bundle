@@ -6,7 +6,7 @@ use Symfony\Bundle\FrameworkBundle\Routing\AttributeRouteControllerLoader;
 use Symfony\Component\Config\Loader\Loader;
 use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 use Symfony\Component\Routing\RouteCollection;
-use Tourze\HotelContractBundle\Controller\Admin\API\HotelContractsController;
+use Tourze\HotelContractBundle\Controller\Admin\HotelContractCrudController;
 use Tourze\RoutingAutoLoaderBundle\Service\RoutingAutoLoaderInterface;
 
 #[AutoconfigureTag('routing.loader')]
@@ -33,7 +33,7 @@ class AttributeControllerLoader extends Loader implements RoutingAutoLoaderInter
     public function autoload(): RouteCollection
     {
         $collection = new RouteCollection();
-        $collection->addCollection($this->controllerLoader->load(HotelContractsController::class));
+        $collection->addCollection($this->controllerLoader->load(HotelContractCrudController::class));
         return $collection;
     }
 }

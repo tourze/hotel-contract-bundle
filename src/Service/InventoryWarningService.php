@@ -2,7 +2,6 @@
 
 namespace Tourze\HotelContractBundle\Service;
 
-use Doctrine\ORM\EntityManagerInterface;
 use Psr\Cache\CacheItemPoolInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
@@ -10,16 +9,17 @@ use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\Mime\Email;
 use Tourze\HotelContractBundle\Entity\InventorySummary;
 use Tourze\HotelContractBundle\Enum\InventorySummaryStatusEnum;
+use Tourze\HotelContractBundle\Repository\InventorySummaryRepository;
 
 class InventoryWarningService
 {
     private const WARNING_CACHE_KEY = 'inventory_warning_sent_%s_%s_%s'; // hotel_id_roomType_id_date
 
     public function __construct(
-        private readonly EntityManagerInterface $entityManager,
         private readonly MailerInterface $mailer,
         private readonly LoggerInterface $logger,
         private readonly InventoryConfig $inventoryConfig,
+        private readonly InventorySummaryRepository $inventorySummaryRepository,
         #[Autowire(service: 'cache.app')] private readonly CacheItemPoolInterface $cache,
     ) {}
 
@@ -52,7 +52,7 @@ class InventoryWarningService
         }
 
         // 如果指定了日期，只检查该日期的库存
-        if ($date) {
+        if ($date !== null) {
             $startDate = clone $date;
             $endDate = clone $date;
         } else {
@@ -63,7 +63,7 @@ class InventoryWarningService
         }
 
         // 查询库存预警状态的记录
-        $inventorySummaries = $this->entityManager->getRepository(InventorySummary::class)
+        $inventorySummaries = $this->inventorySummaryRepository
             ->createQueryBuilder('is')
             ->select('is')
             ->leftJoin('is.hotel', 'h')

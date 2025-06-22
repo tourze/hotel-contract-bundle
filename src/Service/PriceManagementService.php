@@ -30,7 +30,7 @@ class PriceManagementService
     public function getContractPriceCalendarData(?int $contractId, string $month): array
     {
         $contract = null;
-        if ($contractId) {
+        if ($contractId !== null) {
             $contract = $this->contractRepository->find($contractId);
         }
 
@@ -46,7 +46,7 @@ class PriceManagementService
         $calendarData = [];
         $roomTypes = [];
 
-        if ($contract) {
+        if ($contract !== null) {
             // 获取该合同关联的房型
             $roomTypeIds = $this->dailyInventoryRepository->findDistinctRoomTypesByContract($contract->getId());
             $roomTypes = $this->roomTypeRepository->findBy(['id' => $roomTypeIds]);
@@ -80,7 +80,7 @@ class PriceManagementService
         try {
             // 查找并更新价格
             $inventory = $this->dailyInventoryRepository->find($inventoryId);
-            if (!$inventory) {
+            if ($inventory === null) {
                 return ['success' => false, 'message' => '库存记录不存在'];
             }
 
@@ -112,11 +112,11 @@ class PriceManagementService
         $hotel = null;
         $roomType = null;
 
-        if ($hotelId) {
+        if ($hotelId !== null) {
             $hotel = $this->hotelRepository->find($hotelId);
         }
 
-        if ($roomTypeId) {
+        if ($roomTypeId !== null) {
             $roomType = $this->roomTypeRepository->find($roomTypeId);
         }
 
@@ -124,7 +124,7 @@ class PriceManagementService
         $hotels = $this->hotelRepository->findAll();
         $roomTypes = [];
 
-        if ($hotel) {
+        if ($hotel !== null) {
             $roomTypes = $this->roomTypeRepository->findBy(['hotel' => $hotel]);
         }
 
@@ -136,11 +136,11 @@ class PriceManagementService
 
         $calendarData = [];
 
-        if ($hotel) {
+        if ($hotel !== null) {
             // 查询条件
             $criteria = ['room.hotel' => $hotel];
 
-            if ($roomType) {
+            if ($roomType !== null) {
                 $criteria['room.roomType'] = $roomType;
             }
 
@@ -152,7 +152,7 @@ class PriceManagementService
             );
 
             // 如果选择了特定房型，只显示该房型
-            $displayRoomTypes = $roomType ? [$roomType] : $roomTypes;
+            $displayRoomTypes = $roomType !== null ? [$roomType] : $roomTypes;
 
             // 组织日历数据
             $calendarData = $this->organizeSellingPriceData($startDate, $endDate, $displayRoomTypes, $priceData);
@@ -177,7 +177,7 @@ class PriceManagementService
         try {
             // 查找并更新价格
             $inventory = $this->dailyInventoryRepository->find($inventoryId);
-            if (!$inventory) {
+            if ($inventory === null) {
                 return ['success' => false, 'message' => '库存记录不存在'];
             }
 
@@ -230,7 +230,7 @@ class PriceManagementService
             $hotel = $this->hotelRepository->find($params['hotel_id']);
             $roomType = $params['room_type_id'] ? $this->roomTypeRepository->find($params['room_type_id']) : null;
 
-            if (!$hotel) {
+            if ($hotel === null) {
                 return ['success' => false, 'message' => '酒店不存在'];
             }
 
@@ -285,7 +285,7 @@ class PriceManagementService
             $priceType = $params['price_type'] ?? 'cost_price';
             $adjustMethod = $params['adjust_method'];
 
-            if (!$roomType) {
+            if ($roomType === null) {
                 return ['success' => false, 'message' => '房型不存在'];
             }
 
@@ -370,7 +370,7 @@ class PriceManagementService
     private function organizeCalendarData(\DateTimeInterface $startDate, \DateTimeInterface $endDate, array $roomTypes, array $priceData): array
     {
         $calendarData = [];
-        $currentDate = clone $startDate;
+        $currentDate = $startDate instanceof \DateTime ? clone $startDate : new \DateTime($startDate->format('Y-m-d H:i:s'));
 
         // 生成日历头部日期
         $dates = [];
@@ -432,7 +432,7 @@ class PriceManagementService
     private function organizeSellingPriceData(\DateTimeInterface $startDate, \DateTimeInterface $endDate, array $roomTypes, array $inventories): array
     {
         $calendarData = [];
-        $currentDate = clone $startDate;
+        $currentDate = $startDate instanceof \DateTime ? clone $startDate : new \DateTime($startDate->format('Y-m-d H:i:s'));
 
         // 生成日历头部日期
         $dates = [];

@@ -8,21 +8,24 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 use Tourze\HotelContractBundle\Entity\DailyInventory;
-use Tourze\HotelContractBundle\Entity\HotelContract;
-use Tourze\HotelContractBundle\Entity\RoomType;
 use Tourze\HotelContractBundle\Enum\DailyInventoryStatusEnum;
+use Tourze\HotelContractBundle\Repository\DailyInventoryRepository;
+use Tourze\HotelContractBundle\Repository\HotelContractRepository;
+use Tourze\HotelProfileBundle\Repository\RoomTypeRepository;
 
 /**
  * 批量创建库存处理控制器
  */
-#[Route('/admin/room-type-inventory/batch-create-process', name: 'admin_room_type_inventory_batch_create_process', methods: ['POST'])]
 class BatchCreateInventoryProcessController extends AbstractController
 {
     public function __construct(
         private readonly EntityManagerInterface $entityManager,
-    ) {
-    }
+        private readonly RoomTypeRepository $roomTypeRepository,
+        private readonly HotelContractRepository $hotelContractRepository,
+        private readonly DailyInventoryRepository $dailyInventoryRepository,
+    ) {}
 
+    #[Route('/admin/room-type-inventory/batch-create-process', name: 'admin_room_type_inventory_batch_create_process', methods: ['POST'])]
     public function __invoke(Request $request): Response
     {
         // 获取表单参数
@@ -35,8 +38,8 @@ class BatchCreateInventoryProcessController extends AbstractController
         $sellPrice = $request->request->get('sell_price', '0');
 
         // 验证参数
-        if (!$roomTypeId || !$contractId || !$startDateStr || !$endDateStr) {
-            $this->addFlash('error', '请填写所有必填字段');
+        if ($roomTypeId === 0 || $contractId === 0 || !$startDateStr || !$endDateStr) {
+            $this->addFlash('danger', '请填写所有必填字段');
             return $this->redirectToRoute('admin_room_type_inventory_batch_create');
         }
 
@@ -44,16 +47,16 @@ class BatchCreateInventoryProcessController extends AbstractController
             $startDate = new \DateTimeImmutable($startDateStr);
             $endDate = new \DateTimeImmutable($endDateStr);
         } catch (\Exception $e) {
-            $this->addFlash('error', '日期格式不正确');
+            $this->addFlash('danger', '日期格式不正确');
             return $this->redirectToRoute('admin_room_type_inventory_batch_create');
         }
 
         // 获取房型和合同
-        $roomType = $this->entityManager->getRepository(RoomType::class)->find($roomTypeId);
-        $contract = $this->entityManager->getRepository(HotelContract::class)->find($contractId);
+        $roomType = $this->roomTypeRepository->find($roomTypeId);
+        $contract = $this->hotelContractRepository->find($contractId);
 
-        if (!$roomType || !$contract) {
-            $this->addFlash('error', '房型或合同不存在');
+        if ($roomType === null || $contract === null) {
+            $this->addFlash('danger', '房型或合同不存在');
             return $this->redirectToRoute('admin_room_type_inventory_batch_create');
         }
 
@@ -66,14 +69,14 @@ class BatchCreateInventoryProcessController extends AbstractController
 
             while ($currentDate <= $endDate) {
                 // 检查是否已存在库存记录
-                $existingInventory = $this->entityManager->getRepository(DailyInventory::class)
+                $existingInventory = $this->dailyInventoryRepository
                     ->findOneBy([
                         'roomType' => $roomType,
                         'date' => $currentDate,
                         'contract' => $contract,
                     ]);
 
-                if ($existingInventory) {
+                if ($existingInventory !== null) {
                     $skippedCount++;
                 } else {
                     // 创建新的库存记录
@@ -81,13 +84,10 @@ class BatchCreateInventoryProcessController extends AbstractController
                     $inventory->setRoomType($roomType);
                     $inventory->setDate($currentDate);
                     $inventory->setContract($contract);
-                    $inventory->setTotalRooms($quantity);
-                    $inventory->setAvailableRooms($quantity);
-                    $inventory->setReservedRooms(0);
-                    $inventory->setSoldRooms(0);
                     $inventory->setStatus(DailyInventoryStatusEnum::AVAILABLE);
-                    $inventory->setBasePrice($basePrice);
-                    $inventory->setSellPrice($sellPrice);
+                    $inventory->setCostPrice($basePrice);
+                    $inventory->setSellingPrice($sellPrice);
+                    $inventory->setCode(sprintf('%s-%s-%s', $roomType->getId(), $contract->getId(), $currentDate->format('Ymd')));
                     $inventory->setHotel($roomType->getHotel());
 
                     $this->entityManager->persist($inventory);
@@ -101,10 +101,9 @@ class BatchCreateInventoryProcessController extends AbstractController
             $this->entityManager->getConnection()->commit();
 
             $this->addFlash('success', sprintf('成功创建 %d 条库存记录，跳过 %d 条已存在记录', $createdCount, $skippedCount));
-
         } catch (\Exception $e) {
             $this->entityManager->getConnection()->rollBack();
-            $this->addFlash('error', '创建库存时发生错误: ' . $e->getMessage());
+            $this->addFlash('danger', '创建库存时发生错误: ' . $e->getMessage());
         }
 
         return $this->redirectToRoute('admin');

@@ -2,11 +2,10 @@
 
 namespace Tourze\HotelContractBundle\Controller\Admin\API;
 
-use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\Routing\Attribute\Route;
-use Tourze\HotelContractBundle\Entity\HotelContract;
+use Tourze\HotelContractBundle\Repository\HotelContractRepository;
 
 /**
  * 获取合同详情控制器
@@ -14,14 +13,13 @@ use Tourze\HotelContractBundle\Entity\HotelContract;
 class GetContractDetailController extends AbstractController
 {
     public function __construct(
-        private readonly EntityManagerInterface $entityManager,
-    ) {
-    }
+        private readonly HotelContractRepository $hotelContractRepository,
+    ) {}
 
     #[Route('/admin/api/hotel-contracts/{id}', name: 'admin_api_hotel_contract_detail', methods: ['GET'])]
     public function __invoke(int $id): JsonResponse
     {
-        $contract = $this->entityManager->getRepository(HotelContract::class)->find($id);
+        $contract = $this->hotelContractRepository->find($id);
 
         if ($contract === null) {
             return $this->json(['error' => 'Contract not found'], 404);

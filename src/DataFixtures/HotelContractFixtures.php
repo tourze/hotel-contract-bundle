@@ -139,7 +139,7 @@ class HotelContractFixtures extends Fixture implements DependentFixtureInterface
 
             $contract = new HotelContract();
             $contract->setHotel($hotel);
-            $contract->setContractNo('HT' . $randomPrefix . date('md') . str_pad($i, 3, '0', STR_PAD_LEFT));
+            $contract->setContractNo('HT' . $randomPrefix . date('md') . str_pad((string)$i, 3, '0', STR_PAD_LEFT));
             $contract->setContractType($contractType);
             $contract->setStartDate($startDate);
             $contract->setEndDate($endDate);
@@ -171,7 +171,7 @@ class HotelContractFixtures extends Fixture implements DependentFixtureInterface
         foreach ($contractsData as $index => $contractData) {
             $contract = new HotelContract();
             $contract->setHotel($hotel);
-            $contract->setContractNo('HT' . $contractNoPrefix . date('md') . str_pad($startIndex + $index, 3, '0', STR_PAD_LEFT));
+            $contract->setContractNo('HT' . $contractNoPrefix . date('md') . str_pad((string)($startIndex + $index), 3, '0', STR_PAD_LEFT));
             $contract->setContractType($contractData['contractType']);
             $contract->setStartDate($contractData['startDate']);
             $contract->setEndDate($contractData['endDate']);

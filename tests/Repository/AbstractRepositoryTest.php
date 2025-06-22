@@ -2,11 +2,11 @@
 
 namespace Tourze\HotelContractBundle\Tests\Repository;
 
+use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use PHPUnit\Framework\TestCase;
 use Tourze\HotelContractBundle\Repository\DailyInventoryRepository;
 use Tourze\HotelContractBundle\Repository\HotelContractRepository;
 use Tourze\HotelContractBundle\Repository\InventorySummaryRepository;
-use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 
 /**
  * 抽象 Repository 测试类，用于测试 Repository 类的基本结构
@@ -14,19 +14,21 @@ use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
  */
 class AbstractRepositoryTest extends TestCase
 {
-    public function test_dailyInventoryRepository_extendsServiceEntityRepository(): void
+    public function test_repositoriesExtendServiceEntityRepository(): void
     {
-        $this->assertTrue(is_subclass_of(DailyInventoryRepository::class, ServiceEntityRepository::class));
-    }
+        // 验证所有 Repository 类都继承自 ServiceEntityRepository
+        $repositories = [
+            DailyInventoryRepository::class,
+            HotelContractRepository::class,
+            InventorySummaryRepository::class,
+        ];
 
-    public function test_hotelContractRepository_extendsServiceEntityRepository(): void
-    {
-        $this->assertTrue(is_subclass_of(HotelContractRepository::class, ServiceEntityRepository::class));
-    }
-
-    public function test_inventorySummaryRepository_extendsServiceEntityRepository(): void
-    {
-        $this->assertTrue(is_subclass_of(InventorySummaryRepository::class, ServiceEntityRepository::class));
+        foreach ($repositories as $repositoryClass) {
+            $reflection = new \ReflectionClass($repositoryClass);
+            $parent = $reflection->getParentClass();
+            $this->assertNotFalse($parent);
+            $this->assertEquals(ServiceEntityRepository::class, $parent->getName());
+        }
     }
 
     public function test_repository_methods_exist(): void

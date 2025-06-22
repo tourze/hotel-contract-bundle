@@ -36,6 +36,7 @@ class ContractServiceTest extends TestCase
             $this->entityManager,
             $this->mailer,
             $this->logger,
+            $this->repository,
             'test@example.com'
         );
     }
