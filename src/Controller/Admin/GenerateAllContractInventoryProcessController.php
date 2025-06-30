@@ -27,7 +27,7 @@ class GenerateAllContractInventoryProcessController extends AbstractController
         private readonly DailyInventoryRepository $dailyInventoryRepository,
     ) {}
 
-    #[Route('/admin/room-type-inventory/generate-all-contract-process', name: 'admin_room_type_inventory_generate_all_contract_process', methods: ['POST'])]
+    #[Route(path: '/admin/room-type-inventory/generate-all-contract-process', name: 'admin_room_type_inventory_generate_all_contract_process', methods: ['POST'])]
     public function __invoke(Request $request): Response
     {
         // 获取参数

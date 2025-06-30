@@ -17,7 +17,7 @@ class BatchPriceUpdateFormController extends AbstractController
         private readonly RoomTypeRepository $roomTypeRepository,
     ) {}
 
-    #[Route('/admin/room-type-inventory/batch-price-update', name: 'admin_room_type_inventory_batch_price_update')]
+    #[Route(path: '/admin/room-type-inventory/batch-price-update', name: 'admin_room_type_inventory_batch_price_update')]
     public function __invoke(Request $request): Response
     {
         // 获取所有房型

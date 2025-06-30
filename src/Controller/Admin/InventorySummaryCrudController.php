@@ -201,7 +201,7 @@ class InventorySummaryCrudController extends AbstractCrudController
     {
         // 获取当前筛选条件
         $request = $this->requestStack->getCurrentRequest();
-        $filters = $request->query->all('filters') ?: [];
+        $filters = $request->query->all('filters') ?? [];
 
         // 构建查询
         $qb = $this->entityManager->createQueryBuilder();
@@ -333,7 +333,7 @@ class InventorySummaryCrudController extends AbstractCrudController
     /**
      * 同步库存统计数据
      */
-    #[AdminAction('sync', 'sync')]
+    #[AdminAction(routePath: 'sync', routeName: 'sync')]
     public function syncInventorySummary(Request $request): Response
     {
         $result = $this->summaryService->syncInventorySummary();
@@ -350,7 +350,7 @@ class InventorySummaryCrudController extends AbstractCrudController
     /**
      * 库存预警配置页面
      */
-    #[AdminAction('warn', 'warn', methods: ['GET', 'POST'])]
+    #[AdminAction(routePath: 'warn', routeName: 'warn', methods: ['GET', 'POST'])]
     public function inventoryWarningConfig(): Response
     {
         $request = $this->requestStack->getCurrentRequest();
@@ -394,7 +394,7 @@ class InventorySummaryCrudController extends AbstractCrudController
     /**
      * 合同价格日历管理
      */
-    #[AdminAction('contract-calendar', 'contract_price_calendar')]
+    #[AdminAction(routePath: 'contract-calendar', routeName: 'contract_price_calendar')]
     public function contractPriceCalendar(Request $request): Response
     {
         if ($request->isMethod('POST')) {
@@ -439,7 +439,7 @@ class InventorySummaryCrudController extends AbstractCrudController
     /**
      * 销售价格管理
      */
-    #[AdminAction('selling-price', 'selling_price_management')]
+    #[AdminAction(routePath: 'selling-price', routeName: 'selling_price_management')]
     public function sellingPriceManagement(Request $request): Response
     {
         if ($request->isMethod('POST')) {
@@ -463,7 +463,7 @@ class InventorySummaryCrudController extends AbstractCrudController
     /**
      * 更新销售价格
      */
-    #[AdminAction('update-selling-price', 'update_selling_price', methods: ['POST'])]
+    #[AdminAction(routePath: 'update-selling-price', routeName: 'update_selling_price', methods: ['POST'])]
     public function updateSellingPrice(): Response
     {
         $request = $this->requestStack->getCurrentRequest();
@@ -490,7 +490,7 @@ class InventorySummaryCrudController extends AbstractCrudController
     /**
      * 批量调价页面
      */
-    #[AdminAction('batch-adjustment', 'batch_price_adjustment', methods: ['GET', 'POST'])]
+    #[AdminAction(routePath: 'batch-adjustment', routeName: 'batch_price_adjustment', methods: ['GET', 'POST'])]
     public function batchPriceAdjustment(): Response
     {
         $request = $this->requestStack->getCurrentRequest();
@@ -504,7 +504,7 @@ class InventorySummaryCrudController extends AbstractCrudController
                 'price_type' => $request->request->get('price_type'),
                 'adjust_method' => $request->request->get('adjust_method'),
                 'day_filter' => $request->request->get('day_filter'),
-                'days' => $request->request->all('days') ?: [],
+                'days' => $request->request->all('days') ?? [],
                 'reason' => $request->request->get('reason'),
                 'price_value' => $request->request->get('price_value'),
                 'adjust_value' => $request->request->get('adjust_value'),
@@ -545,7 +545,7 @@ class InventorySummaryCrudController extends AbstractCrudController
     /**
      * AJAX更新合同价格
      */
-    #[AdminAction('ajax-update-contract-price', 'ajax_update_contract_price', methods: ['POST'])]
+    #[AdminAction(routePath: 'ajax-update-contract-price', routeName: 'ajax_update_contract_price', methods: ['POST'])]
     public function ajaxUpdateContractPrice(Request $request): Response
     {
         if (!$request->isXmlHttpRequest()) {
@@ -567,7 +567,7 @@ class InventorySummaryCrudController extends AbstractCrudController
     /**
      * AJAX更新销售价格
      */
-    #[AdminAction('ajax-update-selling-price', 'ajax_update_selling_price', methods: ['POST'])]
+    #[AdminAction(routePath: 'ajax-update-selling-price', routeName: 'ajax_update_selling_price', methods: ['POST'])]
     public function ajaxUpdateSellingPrice(Request $request): Response
     {
         if (!$request->isXmlHttpRequest()) {
@@ -589,7 +589,7 @@ class InventorySummaryCrudController extends AbstractCrudController
     /**
      * AJAX批量价格调整
      */
-    #[AdminAction('ajax-batch-price', 'ajax_batch_price', methods: ['POST'])]
+    #[AdminAction(routePath: 'ajax-batch-price', routeName: 'ajax_batch_price', methods: ['POST'])]
     public function ajaxBatchPriceAdjustment(Request $request): Response
     {
         if (!$request->isXmlHttpRequest()) {

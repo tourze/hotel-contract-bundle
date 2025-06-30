@@ -321,7 +321,7 @@ class HotelContractCrudController extends AbstractCrudController
         );
     }
 
-    #[AdminAction('{entityId}/terminate', 'terminate_contract', methods: ['GET', 'POST'])]
+    #[AdminAction(routePath: '{entityId}/terminate', routeName: 'terminate_contract', methods: ['GET', 'POST'])]
     public function terminateContract(AdminContext $context)
     {
         $contract = $context->getEntity()->getInstance();
@@ -358,7 +358,7 @@ class HotelContractCrudController extends AbstractCrudController
         ]);
     }
 
-    #[AdminAction('{entityId}/inventory-stats', 'contract_inventory_stats', methods: ['GET'])]
+    #[AdminAction(routePath: '{entityId}/inventory-stats', routeName: 'contract_inventory_stats', methods: ['GET'])]
     public function inventoryStats(AdminContext $context): Response
     {
         $contract = $context->getEntity()->getInstance();

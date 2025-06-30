@@ -11,7 +11,7 @@ use Symfony\Component\Routing\Attribute\Route;
  */
 class GenerateAllContractInventoryFormController extends AbstractController
 {
-    #[Route('/admin/room-type-inventory/generate-all-contract', name: 'admin_room_type_inventory_generate_all_contract')]
+    #[Route(path: '/admin/room-type-inventory/generate-all-contract', name: 'admin_room_type_inventory_generate_all_contract')]
     public function __invoke(): Response
     {
         return $this->render('@HotelContract/admin/room_type_inventory/generate_all_contract.html.twig', [

@@ -263,7 +263,7 @@ class PriceManagementService
                 'result' => $result
             ]);
 
-            return $result ?: ['success' => false, 'message' => '调价失败'];
+            return $result;
         } catch (\Throwable $e) {
             $this->logger->error('批量调价失败', [
                 'params' => $params,

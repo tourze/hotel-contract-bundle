@@ -8,6 +8,7 @@ use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\Mime\Email;
 use Tourze\HotelContractBundle\Entity\HotelContract;
 use Tourze\HotelContractBundle\Enum\ContractStatusEnum;
+use Tourze\HotelContractBundle\Exception\ContractStatusInvalidException;
 use Tourze\HotelContractBundle\Repository\HotelContractRepository;
 
 class ContractService
@@ -51,7 +52,7 @@ class ContractService
     public function approveContract(HotelContract $contract): void
     {
         if ($contract->getStatus() !== ContractStatusEnum::PENDING) {
-            throw new \InvalidArgumentException('只有待确认状态的合同才能审批生效');
+            throw new ContractStatusInvalidException('只有待确认状态的合同才能审批生效');
         }
 
         $contract->setStatus(ContractStatusEnum::ACTIVE);
@@ -73,7 +74,7 @@ class ContractService
     public function terminateContract(HotelContract $contract, string $terminationReason): void
     {
         if ($contract->getStatus() === ContractStatusEnum::TERMINATED) {
-            throw new \InvalidArgumentException('合同已经是终止状态');
+            throw new ContractStatusInvalidException('合同已经是终止状态');
         }
 
         $contract->setStatus(ContractStatusEnum::TERMINATED);

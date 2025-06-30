@@ -6,6 +6,7 @@ use Doctrine\ORM\EntityManagerInterface;
 use Tourze\HotelContractBundle\Entity\DailyInventory;
 use Tourze\HotelContractBundle\Entity\HotelContract;
 use Tourze\HotelContractBundle\Enum\DailyInventoryStatusEnum;
+use Tourze\HotelContractBundle\Exception\InsufficientInventoryException;
 use Tourze\HotelContractBundle\Repository\DailyInventoryRepository;
 use Tourze\HotelContractBundle\Repository\HotelContractRepository;
 use Tourze\HotelProfileBundle\Entity\RoomType;
@@ -233,7 +234,7 @@ class RoomTypeInventoryService
 
         // 检查是否有足够库存
         if (!$this->hasAvailableInventory($roomType, $startDate, $endDate, $count)) {
-            throw new \RuntimeException('指定日期范围内没有足够的可用库存');
+            throw new InsufficientInventoryException('指定日期范围内没有足够的可用库存');
         }
 
         $currentDate = clone $startDate;

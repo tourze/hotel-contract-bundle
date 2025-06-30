@@ -36,9 +36,17 @@ class DailyInventoryFixtures extends Fixture implements DependentFixtureInterfac
         foreach ($contracts as $contract) {
             $hotel = $contract->getHotel();
 
-            // 查询该酒店的所有房型
-            $roomTypes = $manager->getRepository(RoomType::class)
-                ->findBy(['hotel' => $hotel]);
+            // 使用引用获取房型，而不是查询数据库
+            $roomTypes = [];
+            for ($j = 1; $j <= 5; $j++) { // 假设每个酒店最多5个房型
+                try {
+                    $roomType = $this->getReference(RoomTypeFixtures::ROOM_TYPE_REFERENCE_PREFIX . $hotel->getId() . '_' . $j, RoomType::class);
+                    $roomTypes[] = $roomType;
+                } catch (\Throwable $e) {
+                    // 如果找不到引用就跳过
+                    break;
+                }
+            }
 
             if (empty($roomTypes)) {
                 continue;

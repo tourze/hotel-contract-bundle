@@ -20,7 +20,7 @@ class BatchCreateInventoryFormController extends AbstractController
         private readonly HotelContractRepository $hotelContractRepository,
     ) {}
 
-    #[Route('/admin/room-type-inventory/batch-create', name: 'admin_room_type_inventory_batch_create')]
+    #[Route(path: '/admin/room-type-inventory/batch-create', name: 'admin_room_type_inventory_batch_create')]
     public function __invoke(Request $request): Response
     {
         // 获取所有房型

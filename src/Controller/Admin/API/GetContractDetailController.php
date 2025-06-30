@@ -16,7 +16,7 @@ class GetContractDetailController extends AbstractController
         private readonly HotelContractRepository $hotelContractRepository,
     ) {}
 
-    #[Route('/admin/api/hotel-contracts/{id}', name: 'admin_api_hotel_contract_detail', methods: ['GET'])]
+    #[Route(path: '/admin/api/hotel-contracts/{id}', name: 'admin_api_hotel_contract_detail', methods: ['GET'])]
     public function __invoke(int $id): JsonResponse
     {
         $contract = $this->hotelContractRepository->find($id);

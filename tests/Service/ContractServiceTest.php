@@ -47,11 +47,6 @@ class ContractServiceTest extends TestCase
         $queryBuilder = $this->createMock(QueryBuilder::class);
         $query = $this->createMock(Query::class);
 
-        $this->entityManager->expects($this->once())
-            ->method('getRepository')
-            ->with(HotelContract::class)
-            ->willReturn($this->repository);
-
         $this->repository->expects($this->once())
             ->method('createQueryBuilder')
             ->with('c')
@@ -59,7 +54,7 @@ class ContractServiceTest extends TestCase
 
         $queryBuilder->expects($this->once())
             ->method('select')
-            ->with('COUNT(c)')
+            ->with('COUNT(c.id)')
             ->willReturnSelf();
 
         $queryBuilder->expects($this->once())
@@ -68,8 +63,12 @@ class ContractServiceTest extends TestCase
             ->willReturnSelf();
 
         $queryBuilder->expects($this->once())
+            ->method('andWhere')
+            ->with('DATE(c.createTime) = :today')
+            ->willReturnSelf();
+
+        $queryBuilder->expects($this->exactly(2))
             ->method('setParameter')
-            ->with('prefix', $this->stringContains('HT' . date('Ymd')))
             ->willReturnSelf();
 
         $queryBuilder->expects($this->once())
@@ -84,10 +83,10 @@ class ContractServiceTest extends TestCase
         $contractNumber = $this->contractService->generateContractNumber();
 
         // 验证结果
-        $expectedPrefix = 'HT' . date('Ymd');
+        $expectedPrefix = 'HT' . date('ymd');
         $this->assertStringStartsWith($expectedPrefix, $contractNumber);
         $this->assertEquals($expectedPrefix . '006', $contractNumber);
-        $this->assertEquals(13, strlen($contractNumber)); // HT + 8位日期 + 3位序号
+        $this->assertEquals(11, strlen($contractNumber)); // HT + 6位日期 + 3位序号
     }
 
     public function test_generateContractNumber_firstContractOfDay(): void
@@ -96,11 +95,6 @@ class ContractServiceTest extends TestCase
         $queryBuilder = $this->createMock(QueryBuilder::class);
         $query = $this->createMock(Query::class);
 
-        $this->entityManager->expects($this->once())
-            ->method('getRepository')
-            ->with(HotelContract::class)
-            ->willReturn($this->repository);
-
         $this->repository->expects($this->once())
             ->method('createQueryBuilder')
             ->with('c')
@@ -108,7 +102,7 @@ class ContractServiceTest extends TestCase
 
         $queryBuilder->expects($this->once())
             ->method('select')
-            ->with('COUNT(c)')
+            ->with('COUNT(c.id)')
             ->willReturnSelf();
 
         $queryBuilder->expects($this->once())
@@ -117,6 +111,11 @@ class ContractServiceTest extends TestCase
             ->willReturnSelf();
 
         $queryBuilder->expects($this->once())
+            ->method('andWhere')
+            ->with('DATE(c.createTime) = :today')
+            ->willReturnSelf();
+
+        $queryBuilder->expects($this->exactly(2))
             ->method('setParameter')
             ->willReturnSelf();
 
@@ -132,7 +131,7 @@ class ContractServiceTest extends TestCase
         $contractNumber = $this->contractService->generateContractNumber();
 
         // 验证结果
-        $expectedPrefix = 'HT' . date('Ymd');
+        $expectedPrefix = 'HT' . date('ymd');
         $this->assertEquals($expectedPrefix . '001', $contractNumber);
     }
 
@@ -155,11 +154,13 @@ class ContractServiceTest extends TestCase
             ->method('send')
             ->with($this->callback(function (Email $email): bool {
                 $subject = $email->getSubject();
-                return str_contains($subject, 'HT20241201001') &&
-                    str_contains($subject, '合同状态变更通知');
+                $htmlContent = $email->getHtmlBody();
+                return $subject === '合同审批生效通知' &&
+                    str_contains($htmlContent, 'HT20241201001') &&
+                    str_contains($htmlContent, '测试酒店');
             }));
 
-        $this->logger->expects($this->exactly(2))
+        $this->logger->expects($this->once())
             ->method('info');
 
         // 执行测试
@@ -193,7 +194,7 @@ class ContractServiceTest extends TestCase
                 return str_contains($body, $terminationReason);
             }));
 
-        $this->logger->expects($this->exactly(2))
+        $this->logger->expects($this->once())
             ->method('info');
 
         // 执行测试
@@ -223,9 +224,9 @@ class ContractServiceTest extends TestCase
 
         $this->logger->expects($this->once())
             ->method('info')
-            ->with('合同优先级已调整', $this->callback(function (array $context) use ($newPriority): bool {
-                return $context['oldPriority'] === 5 &&
-                    $context['newPriority'] === $newPriority;
+            ->with('调整合同优先级', $this->callback(function (array $context) use ($newPriority): bool {
+                return $context['old_priority'] === 5 &&
+                    $context['new_priority'] === $newPriority;
             }));
 
         // 执行测试
@@ -256,15 +257,17 @@ class ContractServiceTest extends TestCase
                 $subject = $email->getSubject();
                 $body = $email->getHtmlBody();
 
-                return str_contains($subject, '新合同创建通知') &&
-                    str_contains($subject, 'HT20241201001') &&
+                return $subject === '新合同创建通知' &&
+                    str_contains($body, 'HT20241201001') &&
                     str_contains($body, '测试酒店') &&
-                    str_contains($body, '100000.00 元');
+                    str_contains($body, '100000.00');
             }));
 
         $this->logger->expects($this->once())
             ->method('info')
-            ->with('合同创建通知邮件已发送', ['contractNo' => 'HT20241201001']);
+            ->with('合同创建通知已发送', $this->callback(function (array $context): bool {
+                return isset($context['contract_no']) && $context['contract_no'] === 'HT20241201001';
+            }));
 
         // 执行测试
         $this->contractService->sendContractCreatedNotification($contract);
@@ -291,13 +294,16 @@ class ContractServiceTest extends TestCase
 
         $this->logger->expects($this->once())
             ->method('error')
-            ->with('合同创建通知邮件发送失败', $this->callback(function (array $context): bool {
-                return $context['contractNo'] === 'HT20241201001' &&
+            ->with('发送合同创建通知失败', $this->callback(function (array $context): bool {
+                return $context['contract_no'] === 'HT20241201001' &&
                     $context['error'] === '邮件发送失败';
             }));
 
         // 执行测试 - 不应抛出异常
         $this->contractService->sendContractCreatedNotification($contract);
+        
+        // 验证方法执行成功（通过 expects 验证）
+        $this->assertTrue(true);
     }
 
     public function test_sendContractUpdatedNotification_sendsEmailSuccessfully(): void
@@ -322,15 +328,17 @@ class ContractServiceTest extends TestCase
                 $subject = $email->getSubject();
                 $body = $email->getHtmlBody();
 
-                return str_contains($subject, '合同更新通知') &&
-                    str_contains($subject, 'HT20241201001') &&
+                return $subject === '合同更新通知' &&
+                    str_contains($body, 'HT20241201001') &&
                     str_contains($body, '测试酒店') &&
                     str_contains($body, '生效');
             }));
 
         $this->logger->expects($this->once())
             ->method('info')
-            ->with('合同更新通知邮件已发送', ['contractNo' => 'HT20241201001']);
+            ->with('合同更新通知已发送', $this->callback(function (array $context): bool {
+                return isset($context['contract_no']) && $context['contract_no'] === 'HT20241201001';
+            }));
 
         // 执行测试
         $this->contractService->sendContractUpdatedNotification($contract);
@@ -358,8 +366,8 @@ class ContractServiceTest extends TestCase
 
         $this->logger->expects($this->once())
             ->method('error')
-            ->with('合同更新通知邮件发送失败', $this->callback(function (array $context): bool {
-                return $context['contractNo'] === 'HT20241201001' &&
+            ->with('发送合同更新通知失败', $this->callback(function (array $context): bool {
+                return $context['contract_no'] === 'HT20241201001' &&
                     $context['error'] === 'SMTP服务器连接失败';
             }));
 

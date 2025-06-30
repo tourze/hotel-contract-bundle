@@ -21,7 +21,7 @@ class BatchPriceUpdateProcessController extends AbstractController
         private readonly DailyInventoryRepository $dailyInventoryRepository,
     ) {}
 
-    #[Route('/admin/room-type-inventory/batch-price-update-process', name: 'admin_room_type_inventory_batch_price_update_process', methods: ['POST'])]
+    #[Route(path: '/admin/room-type-inventory/batch-price-update-process', name: 'admin_room_type_inventory_batch_price_update_process', methods: ['POST'])]
     public function __invoke(Request $request): Response
     {
         // 获取表单参数

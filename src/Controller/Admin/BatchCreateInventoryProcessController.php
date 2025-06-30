@@ -25,7 +25,7 @@ class BatchCreateInventoryProcessController extends AbstractController
         private readonly DailyInventoryRepository $dailyInventoryRepository,
     ) {}
 
-    #[Route('/admin/room-type-inventory/batch-create-process', name: 'admin_room_type_inventory_batch_create_process', methods: ['POST'])]
+    #[Route(path: '/admin/room-type-inventory/batch-create-process', name: 'admin_room_type_inventory_batch_create_process', methods: ['POST'])]
     public function __invoke(Request $request): Response
     {
         // 获取表单参数

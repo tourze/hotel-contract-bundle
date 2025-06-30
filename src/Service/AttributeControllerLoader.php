@@ -9,7 +9,7 @@ use Symfony\Component\Routing\RouteCollection;
 use Tourze\HotelContractBundle\Controller\Admin\HotelContractCrudController;
 use Tourze\RoutingAutoLoaderBundle\Service\RoutingAutoLoaderInterface;
 
-#[AutoconfigureTag('routing.loader')]
+#[AutoconfigureTag(name: 'routing.loader')]
 class AttributeControllerLoader extends Loader implements RoutingAutoLoaderInterface
 {
     private AttributeRouteControllerLoader $controllerLoader;
@@ -27,7 +27,7 @@ class AttributeControllerLoader extends Loader implements RoutingAutoLoaderInter
 
     public function supports(mixed $resource, ?string $type = null): bool
     {
-        return false;
+        return $type === 'attribute_controller';
     }
 
     public function autoload(): RouteCollection
