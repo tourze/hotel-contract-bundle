@@ -22,7 +22,7 @@ enum InventorySummaryStatusEnum: string implements Labelable, Itemable, Selectab
 
     public function getLabel(): string
     {
-        return match($this) {
+        return match ($this) {
             self::NORMAL => '正常',
             self::WARNING => '预警',
             self::SOLD_OUT => '售罄',

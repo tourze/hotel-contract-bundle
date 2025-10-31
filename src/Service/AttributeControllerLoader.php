@@ -27,13 +27,14 @@ class AttributeControllerLoader extends Loader implements RoutingAutoLoaderInter
 
     public function supports(mixed $resource, ?string $type = null): bool
     {
-        return $type === 'attribute_controller';
+        return 'attribute_controller' === $type;
     }
 
     public function autoload(): RouteCollection
     {
         $collection = new RouteCollection();
         $collection->addCollection($this->controllerLoader->load(HotelContractCrudController::class));
+
         return $collection;
     }
 }

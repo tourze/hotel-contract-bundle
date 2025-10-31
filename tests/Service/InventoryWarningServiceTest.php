@@ -4,48 +4,42 @@ declare(strict_types=1);
 
 namespace Tourze\HotelContractBundle\Tests\Service;
 
-use PHPUnit\Framework\TestCase;
-use Psr\Cache\CacheItemPoolInterface;
-use Psr\Log\LoggerInterface;
-use Symfony\Component\Mailer\MailerInterface;
-use Tourze\HotelContractBundle\Repository\InventorySummaryRepository;
-use Tourze\HotelContractBundle\Service\InventoryConfig;
+use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use Tourze\HotelContractBundle\Service\InventoryWarningService;
+use Tourze\PHPUnitSymfonyKernelTest\AbstractIntegrationTestCase;
 
-class InventoryWarningServiceTest extends TestCase
+/**
+ * @internal
+ */
+#[CoversClass(InventoryWarningService::class)]
+#[RunTestsInSeparateProcesses]
+final class InventoryWarningServiceTest extends AbstractIntegrationTestCase
 {
-    private MailerInterface $mailer;
-    private LoggerInterface $logger;
-    private InventoryConfig $inventoryConfig;
-    private InventorySummaryRepository $inventorySummaryRepository;
-    private CacheItemPoolInterface $cache;
-    private InventoryWarningService $service;
-
-    protected function setUp(): void
+    protected function onSetUp(): void
     {
-        $this->mailer = $this->createMock(MailerInterface::class);
-        $this->logger = $this->createMock(LoggerInterface::class);
-        $this->inventoryConfig = $this->createMock(InventoryConfig::class);
-        $this->inventorySummaryRepository = $this->createMock(InventorySummaryRepository::class);
-        $this->cache = $this->createMock(CacheItemPoolInterface::class);
-        
-        $this->service = new InventoryWarningService(
-            $this->mailer,
-            $this->logger,
-            $this->inventoryConfig,
-            $this->inventorySummaryRepository,
-            $this->cache
-        );
+        // 设置邮件环境变量
+        putenv('MAILER_DSN=smtp://localhost:1025');
     }
 
-    public function testServiceCanBeInstantiated(): void
+    private function getInventoryWarningService(): InventoryWarningService
     {
-        $this->assertInstanceOf(InventoryWarningService::class, $this->service);
+        return self::getService(InventoryWarningService::class);
     }
 
-    public function testCheckAndSendWarningsExists(): void
+    public function testCheckAndSendWarningsProcessesData(): void
     {
-        // 测试服务实现了所需的方法
-        $this->assertTrue(true, 'Service was instantiated successfully with all required methods');
+        // 执行测试 - 主要验证方法不抛出异常
+        $result = $this->getInventoryWarningService()->checkAndSendWarnings();
+
+        // 验证返回结果包含预期的键
+        $this->assertArrayHasKey('success', $result);
+        $this->assertArrayHasKey('sent_count', $result);
+        $this->assertArrayHasKey('message', $result);
+
+        // 验证结果值的类型
+        $this->assertIsBool($result['success']);
+        $this->assertIsInt($result['sent_count']);
+        // message字段已确定为字符串类型，无需重复检查
     }
 }

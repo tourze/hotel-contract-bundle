@@ -11,19 +11,20 @@ use Tourze\HotelContractBundle\Entity\DailyInventory;
 use Tourze\HotelContractBundle\Enum\DailyInventoryStatusEnum;
 use Tourze\HotelContractBundle\Repository\DailyInventoryRepository;
 use Tourze\HotelContractBundle\Repository\HotelContractRepository;
-use Tourze\HotelProfileBundle\Repository\RoomTypeRepository;
+use Tourze\HotelProfileBundle\Service\RoomTypeService;
 
 /**
  * 批量创建库存处理控制器
  */
-class BatchCreateInventoryProcessController extends AbstractController
+final class BatchCreateInventoryProcessController extends AbstractController
 {
     public function __construct(
         private readonly EntityManagerInterface $entityManager,
-        private readonly RoomTypeRepository $roomTypeRepository,
+        private readonly RoomTypeService $roomTypeService,
         private readonly HotelContractRepository $hotelContractRepository,
         private readonly DailyInventoryRepository $dailyInventoryRepository,
-    ) {}
+    ) {
+    }
 
     #[Route(path: '/admin/room-type-inventory/batch-create-process', name: 'admin_room_type_inventory_batch_create_process', methods: ['POST'])]
     public function __invoke(Request $request): Response
@@ -38,25 +39,28 @@ class BatchCreateInventoryProcessController extends AbstractController
         $sellPrice = $request->request->get('sell_price', '0');
 
         // 验证参数
-        if ($roomTypeId === 0 || $contractId === 0 || !$startDateStr || !$endDateStr) {
+        if (0 === $roomTypeId || 0 === $contractId || '' === $startDateStr || '' === $endDateStr || null === $startDateStr || null === $endDateStr) {
             $this->addFlash('danger', '请填写所有必填字段');
+
             return $this->redirectToRoute('admin_room_type_inventory_batch_create');
         }
 
         try {
-            $startDate = new \DateTimeImmutable($startDateStr);
-            $endDate = new \DateTimeImmutable($endDateStr);
+            $startDate = new \DateTimeImmutable((string) $startDateStr);
+            $endDate = new \DateTimeImmutable((string) $endDateStr);
         } catch (\Exception $e) {
             $this->addFlash('danger', '日期格式不正确');
+
             return $this->redirectToRoute('admin_room_type_inventory_batch_create');
         }
 
         // 获取房型和合同
-        $roomType = $this->roomTypeRepository->find($roomTypeId);
+        $roomType = $this->roomTypeService->findRoomTypeById($roomTypeId);
         $contract = $this->hotelContractRepository->find($contractId);
 
-        if ($roomType === null || $contract === null) {
+        if (null === $roomType || null === $contract) {
             $this->addFlash('danger', '房型或合同不存在');
+
             return $this->redirectToRoute('admin_room_type_inventory_batch_create');
         }
 
@@ -74,10 +78,11 @@ class BatchCreateInventoryProcessController extends AbstractController
                         'roomType' => $roomType,
                         'date' => $currentDate,
                         'contract' => $contract,
-                    ]);
+                    ])
+                ;
 
-                if ($existingInventory !== null) {
-                    $skippedCount++;
+                if (null !== $existingInventory) {
+                    ++$skippedCount;
                 } else {
                     // 创建新的库存记录
                     $inventory = new DailyInventory();
@@ -85,13 +90,13 @@ class BatchCreateInventoryProcessController extends AbstractController
                     $inventory->setDate($currentDate);
                     $inventory->setContract($contract);
                     $inventory->setStatus(DailyInventoryStatusEnum::AVAILABLE);
-                    $inventory->setCostPrice($basePrice);
-                    $inventory->setSellingPrice($sellPrice);
+                    $inventory->setCostPrice((string) $basePrice);
+                    $inventory->setSellingPrice((string) $sellPrice);
                     $inventory->setCode(sprintf('%s-%s-%s', $roomType->getId(), $contract->getId(), $currentDate->format('Ymd')));
                     $inventory->setHotel($roomType->getHotel());
 
                     $this->entityManager->persist($inventory);
-                    $createdCount++;
+                    ++$createdCount;
                 }
 
                 $currentDate = $currentDate->modify('+1 day');

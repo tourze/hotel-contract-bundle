@@ -18,6 +18,7 @@ use Tourze\HotelContractBundle\Service\InventoryWarningService;
 class InventoryWarningCommand extends Command
 {
     protected const NAME = 'app:inventory:check-warnings';
+
     public function __construct(
         private readonly InventorySummaryService $summaryService,
         private readonly InventoryWarningService $warningService,
@@ -29,7 +30,8 @@ class InventoryWarningCommand extends Command
     {
         $this
             ->addOption('sync', null, InputOption::VALUE_NONE, '在检查前同步库存统计数据')
-            ->addOption('date', null, InputOption::VALUE_REQUIRED, '指定检查特定日期的库存(格式: Y-m-d)');
+            ->addOption('date', null, InputOption::VALUE_REQUIRED, '指定检查特定日期的库存(格式: Y-m-d)')
+        ;
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): int
@@ -37,46 +39,87 @@ class InventoryWarningCommand extends Command
         $io = new SymfonyStyle($input, $output);
         $io->title('库存预警检查');
 
-        // 解析日期参数
-        $date = null;
+        try {
+            $date = $this->parseDate($input, $io);
+        } catch (\Throwable $e) {
+            return Command::FAILURE;
+        }
+
+        if ($this->shouldSync($input)) {
+            $syncResult = $this->performSync($io, $date);
+            if (!$syncResult) {
+                return Command::FAILURE;
+            }
+        }
+
+        return $this->performWarningCheck($io, $date);
+    }
+
+    private function parseDate(InputInterface $input, SymfonyStyle $io): ?\DateTimeImmutable
+    {
         $dateStr = $input->getOption('date');
-        if ($dateStr !== null && is_string($dateStr) && trim($dateStr) !== '') {
-            try {
-                $date = new \DateTimeImmutable($dateStr);
-                $io->note(sprintf('检查特定日期: %s', $date->format('Y-m-d')));
-            } catch (\Throwable $e) {
-                $io->error(sprintf('日期格式错误: %s', $dateStr));
-                return Command::FAILURE;
-            }
+        if (null === $dateStr || !is_string($dateStr) || '' === trim($dateStr)) {
+            return null;
         }
 
-        // 是否先同步库存统计
-        if ((bool) $input->getOption('sync')) {
-            $io->section('同步库存统计数据');
-            $syncResult = $this->summaryService->syncInventorySummary($date);
+        try {
+            $date = new \DateTimeImmutable($dateStr);
+            $io->note(sprintf('检查特定日期: %s', $date->format('Y-m-d')));
 
-            if ($syncResult['success']) {
-                $io->success((string) $syncResult['message']);
-            } else {
-                $io->error((string) $syncResult['message']);
-                return Command::FAILURE;
-            }
+            return $date;
+        } catch (\Throwable $e) {
+            $io->error(sprintf('日期格式错误: %s', $dateStr));
+            throw $e; // 重新抛出异常，让调用者处理
+        }
+    }
+
+    private function shouldSync(InputInterface $input): bool
+    {
+        return (bool) $input->getOption('sync');
+    }
+
+    private function performSync(SymfonyStyle $io, ?\DateTimeImmutable $date): bool
+    {
+        $io->section('同步库存统计数据');
+        $syncResult = $this->summaryService->syncInventorySummary($date);
+
+        if (isset($syncResult['success']) && true === $syncResult['success']) {
+            $message = $syncResult['message'] ?? '同步成功';
+            $messageStr = \is_string($message) ? $message : '同步成功';
+            $io->success($messageStr);
+
+            return true;
         }
 
-        // 执行库存预警检查
+        $message = $syncResult['message'] ?? '同步失败';
+        $messageStr = \is_string($message) ? $message : '同步失败';
+        $io->error($messageStr);
+
+        return false;
+    }
+
+    private function performWarningCheck(SymfonyStyle $io, ?\DateTimeImmutable $date): int
+    {
         $io->section('检查库存预警');
         $result = $this->warningService->checkAndSendWarnings($date);
 
-        if ($result['success']) {
-            if ($result['sent_count'] > 0) {
-                $io->success((string) $result['message']);
-            } else {
-                $io->info((string) $result['message']);
-            }
-            return Command::SUCCESS;
-        } else {
-            $io->error((string) $result['message']);
+        if (!isset($result['success']) || true !== $result['success']) {
+            $message = $result['message'] ?? '检查预警失败';
+            $messageStr = \is_string($message) ? $message : '检查预警失败';
+            $io->error($messageStr);
+
             return Command::FAILURE;
         }
+
+        $message = $result['message'] ?? '检查预警完成';
+        $messageStr = \is_string($message) ? $message : '检查预警完成';
+
+        if ($result['sent_count'] > 0) {
+            $io->success($messageStr);
+        } else {
+            $io->info($messageStr);
+        }
+
+        return Command::SUCCESS;
     }
 }

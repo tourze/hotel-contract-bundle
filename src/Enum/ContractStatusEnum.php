@@ -22,7 +22,7 @@ enum ContractStatusEnum: string implements Labelable, Itemable, Selectable
 
     public function getLabel(): string
     {
-        return match($this) {
+        return match ($this) {
             self::PENDING => '待确认',
             self::ACTIVE => '生效',
             self::TERMINATED => '终止',

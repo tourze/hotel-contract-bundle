@@ -4,7 +4,6 @@ namespace Tourze\HotelContractBundle\Entity;
 
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
-use Stringable;
 use Symfony\Component\Validator\Constraints as Assert;
 use Tourze\DoctrineTimestampBundle\Traits\TimestampableAware;
 use Tourze\HotelContractBundle\Enum\InventorySummaryStatusEnum;
@@ -16,9 +15,10 @@ use Tourze\HotelProfileBundle\Entity\RoomType;
 #[ORM\Table(name: 'inventory_summary', options: ['comment' => '库存统计表'])]
 #[ORM\Index(name: 'inventory_summary_idx_hotel_roomtype_date', columns: ['hotel_id', 'room_type_id', 'date'])]
 #[ORM\Index(name: 'inventory_summary_idx_date_status', columns: ['date', 'status'])]
-class InventorySummary implements Stringable
+class InventorySummary implements \Stringable
 {
     use TimestampableAware;
+
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column(type: Types::BIGINT, options: ['comment' => '主键ID'])]
@@ -33,6 +33,7 @@ class InventorySummary implements Stringable
     private ?RoomType $roomType = null;
 
     #[ORM\Column(type: Types::DATE_IMMUTABLE, options: ['comment' => '统计日期'])]
+    #[Assert\NotNull]
     private ?\DateTimeInterface $date = null;
 
     #[ORM\Column(type: Types::INTEGER, options: ['comment' => '该房型总房间数'])]
@@ -56,22 +57,24 @@ class InventorySummary implements Stringable
     private int $pendingRooms = 0;
 
     #[ORM\Column(type: Types::STRING, length: 20, enumType: InventorySummaryStatusEnum::class, options: ['comment' => '库存状态'])]
+    #[Assert\Choice(callback: [InventorySummaryStatusEnum::class, 'cases'])]
     private InventorySummaryStatusEnum $status = InventorySummaryStatusEnum::NORMAL;
 
     #[ORM\Column(type: Types::DECIMAL, precision: 10, scale: 2, nullable: true, options: ['comment' => '当日最低采购价'])]
     #[Assert\PositiveOrZero]
+    #[Assert\Length(max: 13)]
     private ?string $lowestPrice = null;
 
     #[ORM\ManyToOne]
     #[ORM\JoinColumn(name: 'lowest_contract_id', nullable: true)]
     private ?HotelContract $lowestContract = null;
 
-
     public function __toString(): string
     {
-        $hotelName = isset($this->hotel) ? $this->hotel->getName() : 'Unknown';
-        $roomTypeName = isset($this->roomType) ? $this->roomType->getName() : 'Unknown';
-        $date = isset($this->date) ? $this->date->format('Y-m-d') : 'Unknown Date';
+        $hotelName = null !== $this->hotel ? $this->hotel->getName() : 'Unknown';
+        $roomTypeName = null !== $this->roomType ? $this->roomType->getName() : 'Unknown';
+        $date = null !== $this->date ? $this->date->format('Y-m-d') : 'Unknown Date';
+
         return sprintf('%s - %s - %s', $hotelName, $roomTypeName, $date);
     }
 
@@ -85,10 +88,9 @@ class InventorySummary implements Stringable
         return $this->hotel;
     }
 
-    public function setHotel(?Hotel $hotel): self
+    public function setHotel(?Hotel $hotel): void
     {
         $this->hotel = $hotel;
-        return $this;
     }
 
     public function getRoomType(): ?RoomType
@@ -96,10 +98,9 @@ class InventorySummary implements Stringable
         return $this->roomType;
     }
 
-    public function setRoomType(?RoomType $roomType): self
+    public function setRoomType(?RoomType $roomType): void
     {
         $this->roomType = $roomType;
-        return $this;
     }
 
     public function getDate(): ?\DateTimeInterface
@@ -107,10 +108,9 @@ class InventorySummary implements Stringable
         return $this->date;
     }
 
-    public function setDate(?\DateTimeInterface $date): self
+    public function setDate(?\DateTimeInterface $date): void
     {
         $this->date = $date;
-        return $this;
     }
 
     public function getTotalRooms(): int
@@ -118,11 +118,10 @@ class InventorySummary implements Stringable
         return $this->totalRooms;
     }
 
-    public function setTotalRooms(int $totalRooms): self
+    public function setTotalRooms(int $totalRooms): void
     {
         $this->totalRooms = $totalRooms;
         $this->updateStatus();
-        return $this;
     }
 
     public function getAvailableRooms(): int
@@ -130,11 +129,10 @@ class InventorySummary implements Stringable
         return $this->availableRooms;
     }
 
-    public function setAvailableRooms(int $availableRooms): self
+    public function setAvailableRooms(int $availableRooms): void
     {
         $this->availableRooms = $availableRooms;
         $this->updateStatus();
-        return $this;
     }
 
     public function getReservedRooms(): int
@@ -142,10 +140,9 @@ class InventorySummary implements Stringable
         return $this->reservedRooms;
     }
 
-    public function setReservedRooms(int $reservedRooms): self
+    public function setReservedRooms(int $reservedRooms): void
     {
         $this->reservedRooms = $reservedRooms;
-        return $this;
     }
 
     public function getSoldRooms(): int
@@ -153,11 +150,10 @@ class InventorySummary implements Stringable
         return $this->soldRooms;
     }
 
-    public function setSoldRooms(int $soldRooms): self
+    public function setSoldRooms(int $soldRooms): void
     {
         $this->soldRooms = $soldRooms;
         $this->updateStatus();
-        return $this;
     }
 
     public function getPendingRooms(): int
@@ -165,10 +161,9 @@ class InventorySummary implements Stringable
         return $this->pendingRooms;
     }
 
-    public function setPendingRooms(int $pendingRooms): self
+    public function setPendingRooms(int $pendingRooms): void
     {
         $this->pendingRooms = $pendingRooms;
-        return $this;
     }
 
     public function getStatus(): InventorySummaryStatusEnum
@@ -176,10 +171,9 @@ class InventorySummary implements Stringable
         return $this->status;
     }
 
-    public function setStatus(InventorySummaryStatusEnum $status): self
+    public function setStatus(InventorySummaryStatusEnum $status): void
     {
         $this->status = $status;
-        return $this;
     }
 
     public function getLowestPrice(): ?string
@@ -187,10 +181,9 @@ class InventorySummary implements Stringable
         return $this->lowestPrice;
     }
 
-    public function setLowestPrice(?string $lowestPrice): self
+    public function setLowestPrice(?string $lowestPrice): void
     {
         $this->lowestPrice = $lowestPrice;
-        return $this;
     }
 
     public function getLowestContract(): ?HotelContract
@@ -198,12 +191,10 @@ class InventorySummary implements Stringable
         return $this->lowestContract;
     }
 
-    public function setLowestContract(?HotelContract $lowestContract): self
+    public function setLowestContract(?HotelContract $lowestContract): void
     {
         $this->lowestContract = $lowestContract;
-        return $this;
     }
-
 
     /**
      * 更新库存状态
@@ -212,6 +203,7 @@ class InventorySummary implements Stringable
     {
         if ($this->totalRooms <= 0) {
             $this->status = InventorySummaryStatusEnum::SOLD_OUT;
+
             return;
         }
 
@@ -225,5 +217,4 @@ class InventorySummary implements Stringable
             $this->status = InventorySummaryStatusEnum::NORMAL;
         }
     }
-
 }

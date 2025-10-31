@@ -2,64 +2,99 @@
 
 namespace Tourze\HotelContractBundle\Tests\Enum;
 
-use PHPUnit\Framework\TestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\TestWith;
 use Tourze\HotelContractBundle\Enum\InventorySummaryStatusEnum;
+use Tourze\PHPUnitEnum\AbstractEnumTestCase;
 
-class InventorySummaryStatusEnumTest extends TestCase
+/**
+ * @internal
+ */
+#[CoversClass(InventorySummaryStatusEnum::class)]
+final class InventorySummaryStatusEnumTest extends AbstractEnumTestCase
 {
-    public function test_enumCases_haveCorrectValues(): void
+    #[TestWith([InventorySummaryStatusEnum::NORMAL, 'normal', '正常'])]
+    #[TestWith([InventorySummaryStatusEnum::WARNING, 'warning', '预警'])]
+    #[TestWith([InventorySummaryStatusEnum::SOLD_OUT, 'sold_out', '售罄'])]
+    public function testEnumValueAndLabel(InventorySummaryStatusEnum $enum, string $expectedValue, string $expectedLabel): void
     {
-        $this->assertSame('normal', InventorySummaryStatusEnum::NORMAL->value);
-        $this->assertSame('warning', InventorySummaryStatusEnum::WARNING->value);
-        $this->assertSame('sold_out', InventorySummaryStatusEnum::SOLD_OUT->value);
+        $this->assertSame($expectedValue, $enum->value);
+        $this->assertSame($expectedLabel, $enum->getLabel());
     }
 
-    public function test_getLabel_returnsCorrectLabels(): void
-    {
-        $this->assertSame('正常', InventorySummaryStatusEnum::NORMAL->getLabel());
-        $this->assertSame('预警', InventorySummaryStatusEnum::WARNING->getLabel());
-        $this->assertSame('售罄', InventorySummaryStatusEnum::SOLD_OUT->getLabel());
-    }
-
-    public function test_implementsInterfaces(): void
-    {
-        $this->assertInstanceOf(\Tourze\EnumExtra\Labelable::class, InventorySummaryStatusEnum::NORMAL);
-        $this->assertInstanceOf(\Tourze\EnumExtra\Itemable::class, InventorySummaryStatusEnum::NORMAL);
-        $this->assertInstanceOf(\Tourze\EnumExtra\Selectable::class, InventorySummaryStatusEnum::NORMAL);
-    }
-
-    public function test_allCasesExist(): void
+    public function testAllCasesExist(): void
     {
         $cases = InventorySummaryStatusEnum::cases();
-        
+
         $this->assertCount(3, $cases);
         $this->assertContains(InventorySummaryStatusEnum::NORMAL, $cases);
         $this->assertContains(InventorySummaryStatusEnum::WARNING, $cases);
         $this->assertContains(InventorySummaryStatusEnum::SOLD_OUT, $cases);
     }
 
-    public function test_canCreateFromValue(): void
+    #[TestWith(['normal', InventorySummaryStatusEnum::NORMAL])]
+    #[TestWith(['warning', InventorySummaryStatusEnum::WARNING])]
+    #[TestWith(['sold_out', InventorySummaryStatusEnum::SOLD_OUT])]
+    public function testFromReturnsCorrectEnum(string $value, InventorySummaryStatusEnum $expectedEnum): void
     {
-        $this->assertSame(InventorySummaryStatusEnum::NORMAL, InventorySummaryStatusEnum::from('normal'));
-        $this->assertSame(InventorySummaryStatusEnum::WARNING, InventorySummaryStatusEnum::from('warning'));
-        $this->assertSame(InventorySummaryStatusEnum::SOLD_OUT, InventorySummaryStatusEnum::from('sold_out'));
+        $this->assertSame($expectedEnum, InventorySummaryStatusEnum::from($value));
     }
 
-    public function test_from_throwsException_withInvalidValue(): void
+    #[TestWith(['invalid_value'])]
+    #[TestWith([''])]
+    #[TestWith(['null'])]
+    #[TestWith(['unknown'])]
+    #[TestWith(['error'])]
+    #[TestWith(['danger'])]
+    public function testFromThrowsValueErrorWithInvalidValue(string $invalidValue): void
     {
         $this->expectException(\ValueError::class);
-        InventorySummaryStatusEnum::from('invalid');
+        InventorySummaryStatusEnum::from($invalidValue);
     }
 
-    public function test_tryFrom_returnsNull_withInvalidValue(): void
+    #[TestWith(['normal', InventorySummaryStatusEnum::NORMAL])]
+    #[TestWith(['warning', InventorySummaryStatusEnum::WARNING])]
+    #[TestWith(['sold_out', InventorySummaryStatusEnum::SOLD_OUT])]
+    public function testTryFromReturnsEnumWithValidValue(string $value, InventorySummaryStatusEnum $expectedEnum): void
     {
-        $this->assertNull(InventorySummaryStatusEnum::tryFrom('invalid'));
+        $this->assertSame($expectedEnum, InventorySummaryStatusEnum::tryFrom($value));
     }
 
-    public function test_tryFrom_returnsEnum_withValidValue(): void
+    #[TestWith(['invalid_value'])]
+    #[TestWith([''])]
+    #[TestWith(['null'])]
+    #[TestWith(['unknown'])]
+    #[TestWith(['error'])]
+    #[TestWith(['danger'])]
+    public function testTryFromReturnsNullWithInvalidValue(string $invalidValue): void
     {
-        $this->assertSame(InventorySummaryStatusEnum::NORMAL, InventorySummaryStatusEnum::tryFrom('normal'));
-        $this->assertSame(InventorySummaryStatusEnum::WARNING, InventorySummaryStatusEnum::tryFrom('warning'));
-        $this->assertSame(InventorySummaryStatusEnum::SOLD_OUT, InventorySummaryStatusEnum::tryFrom('sold_out'));
+        $this->assertNull(InventorySummaryStatusEnum::tryFrom($invalidValue));
     }
-} 
+
+    public function testValuesAreUnique(): void
+    {
+        $values = array_map(fn (InventorySummaryStatusEnum $case) => $case->value, InventorySummaryStatusEnum::cases());
+        $uniqueValues = array_unique($values);
+
+        $this->assertCount(count($values), $uniqueValues, 'All enum values must be unique');
+    }
+
+    public function testLabelsAreUnique(): void
+    {
+        $labels = array_map(fn (InventorySummaryStatusEnum $case) => $case->getLabel(), InventorySummaryStatusEnum::cases());
+        $uniqueLabels = array_unique($labels);
+
+        $this->assertCount(count($labels), $uniqueLabels, 'All enum labels must be unique');
+    }
+
+    public function testToArray(): void
+    {
+        $result = InventorySummaryStatusEnum::NORMAL->toArray();
+
+        // 验证返回的数组包含预期的键值对
+        $this->assertArrayHasKey('value', $result);
+        $this->assertArrayHasKey('label', $result);
+        $this->assertSame('normal', $result['value']);
+        $this->assertSame('正常', $result['label']);
+    }
+}

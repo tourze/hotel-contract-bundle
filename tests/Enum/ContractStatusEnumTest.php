@@ -2,64 +2,95 @@
 
 namespace Tourze\HotelContractBundle\Tests\Enum;
 
-use PHPUnit\Framework\TestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\TestWith;
 use Tourze\HotelContractBundle\Enum\ContractStatusEnum;
+use Tourze\PHPUnitEnum\AbstractEnumTestCase;
 
-class ContractStatusEnumTest extends TestCase
+/**
+ * @internal
+ */
+#[CoversClass(ContractStatusEnum::class)]
+final class ContractStatusEnumTest extends AbstractEnumTestCase
 {
-    public function test_enumCases_haveCorrectValues(): void
+    #[TestWith([ContractStatusEnum::PENDING, 'pending', '待确认'])]
+    #[TestWith([ContractStatusEnum::ACTIVE, 'active', '生效'])]
+    #[TestWith([ContractStatusEnum::TERMINATED, 'terminated', '终止'])]
+    public function testEnumValueAndLabel(ContractStatusEnum $enum, string $expectedValue, string $expectedLabel): void
     {
-        $this->assertSame('pending', ContractStatusEnum::PENDING->value);
-        $this->assertSame('active', ContractStatusEnum::ACTIVE->value);
-        $this->assertSame('terminated', ContractStatusEnum::TERMINATED->value);
+        $this->assertSame($expectedValue, $enum->value);
+        $this->assertSame($expectedLabel, $enum->getLabel());
     }
 
-    public function test_getLabel_returnsCorrectLabels(): void
-    {
-        $this->assertSame('待确认', ContractStatusEnum::PENDING->getLabel());
-        $this->assertSame('生效', ContractStatusEnum::ACTIVE->getLabel());
-        $this->assertSame('终止', ContractStatusEnum::TERMINATED->getLabel());
-    }
-
-    public function test_implementsInterfaces(): void
-    {
-        $this->assertInstanceOf(\Tourze\EnumExtra\Labelable::class, ContractStatusEnum::PENDING);
-        $this->assertInstanceOf(\Tourze\EnumExtra\Itemable::class, ContractStatusEnum::PENDING);
-        $this->assertInstanceOf(\Tourze\EnumExtra\Selectable::class, ContractStatusEnum::PENDING);
-    }
-
-    public function test_allCasesExist(): void
+    public function testAllCasesExist(): void
     {
         $cases = ContractStatusEnum::cases();
-        
+
         $this->assertCount(3, $cases);
         $this->assertContains(ContractStatusEnum::PENDING, $cases);
         $this->assertContains(ContractStatusEnum::ACTIVE, $cases);
         $this->assertContains(ContractStatusEnum::TERMINATED, $cases);
     }
 
-    public function test_canCreateFromValue(): void
+    #[TestWith(['pending', ContractStatusEnum::PENDING])]
+    #[TestWith(['active', ContractStatusEnum::ACTIVE])]
+    #[TestWith(['terminated', ContractStatusEnum::TERMINATED])]
+    public function testFromReturnsCorrectEnum(string $value, ContractStatusEnum $expectedEnum): void
     {
-        $this->assertSame(ContractStatusEnum::PENDING, ContractStatusEnum::from('pending'));
-        $this->assertSame(ContractStatusEnum::ACTIVE, ContractStatusEnum::from('active'));
-        $this->assertSame(ContractStatusEnum::TERMINATED, ContractStatusEnum::from('terminated'));
+        $this->assertSame($expectedEnum, ContractStatusEnum::from($value));
     }
 
-    public function test_from_throwsException_withInvalidValue(): void
+    #[TestWith(['invalid_value'])]
+    #[TestWith([''])]
+    #[TestWith(['null'])]
+    #[TestWith(['unknown'])]
+    public function testFromThrowsValueErrorWithInvalidValue(string $invalidValue): void
     {
         $this->expectException(\ValueError::class);
-        ContractStatusEnum::from('invalid');
+        ContractStatusEnum::from($invalidValue);
     }
 
-    public function test_tryFrom_returnsNull_withInvalidValue(): void
+    #[TestWith(['pending', ContractStatusEnum::PENDING])]
+    #[TestWith(['active', ContractStatusEnum::ACTIVE])]
+    #[TestWith(['terminated', ContractStatusEnum::TERMINATED])]
+    public function testTryFromReturnsEnumWithValidValue(string $value, ContractStatusEnum $expectedEnum): void
     {
-        $this->assertNull(ContractStatusEnum::tryFrom('invalid'));
+        $this->assertSame($expectedEnum, ContractStatusEnum::tryFrom($value));
     }
 
-    public function test_tryFrom_returnsEnum_withValidValue(): void
+    #[TestWith(['invalid_value'])]
+    #[TestWith([''])]
+    #[TestWith(['null'])]
+    #[TestWith(['unknown'])]
+    public function testTryFromReturnsNullWithInvalidValue(string $invalidValue): void
     {
-        $this->assertSame(ContractStatusEnum::PENDING, ContractStatusEnum::tryFrom('pending'));
-        $this->assertSame(ContractStatusEnum::ACTIVE, ContractStatusEnum::tryFrom('active'));
-        $this->assertSame(ContractStatusEnum::TERMINATED, ContractStatusEnum::tryFrom('terminated'));
+        $this->assertNull(ContractStatusEnum::tryFrom($invalidValue));
     }
-} 
+
+    public function testValuesAreUnique(): void
+    {
+        $values = array_map(fn (ContractStatusEnum $case) => $case->value, ContractStatusEnum::cases());
+        $uniqueValues = array_unique($values);
+
+        $this->assertCount(count($values), $uniqueValues, 'All enum values must be unique');
+    }
+
+    public function testLabelsAreUnique(): void
+    {
+        $labels = array_map(fn (ContractStatusEnum $case) => $case->getLabel(), ContractStatusEnum::cases());
+        $uniqueLabels = array_unique($labels);
+
+        $this->assertCount(count($labels), $uniqueLabels, 'All enum labels must be unique');
+    }
+
+    public function testToArray(): void
+    {
+        $result = ContractStatusEnum::PENDING->toArray();
+
+        // 验证返回的数组包含预期的键值对
+        $this->assertArrayHasKey('value', $result);
+        $this->assertArrayHasKey('label', $result);
+        $this->assertSame('pending', $result['value']);
+        $this->assertSame('待确认', $result['label']);
+    }
+}

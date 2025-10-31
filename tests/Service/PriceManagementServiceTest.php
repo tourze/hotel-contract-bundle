@@ -4,56 +4,127 @@ declare(strict_types=1);
 
 namespace Tourze\HotelContractBundle\Tests\Service;
 
-use Doctrine\ORM\EntityManagerInterface;
-use PHPUnit\Framework\TestCase;
-use Psr\Log\LoggerInterface;
-use Tourze\HotelContractBundle\Repository\DailyInventoryRepository;
-use Tourze\HotelContractBundle\Repository\HotelContractRepository;
-use Tourze\HotelContractBundle\Service\InventoryUpdateService;
+use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use Tourze\HotelContractBundle\Service\PriceManagementService;
-use Tourze\HotelProfileBundle\Repository\HotelRepository;
-use Tourze\HotelProfileBundle\Repository\RoomTypeRepository;
+use Tourze\PHPUnitSymfonyKernelTest\AbstractIntegrationTestCase;
 
-class PriceManagementServiceTest extends TestCase
+/**
+ * @internal
+ */
+#[CoversClass(PriceManagementService::class)]
+#[RunTestsInSeparateProcesses]
+final class PriceManagementServiceTest extends AbstractIntegrationTestCase
 {
-    private EntityManagerInterface $entityManager;
-    private InventoryUpdateService $updateService;
-    private HotelRepository $hotelRepository;
-    private RoomTypeRepository $roomTypeRepository;
-    private HotelContractRepository $contractRepository;
-    private DailyInventoryRepository $dailyInventoryRepository;
-    private LoggerInterface $logger;
-    private PriceManagementService $service;
-
-    protected function setUp(): void
+    protected function onSetUp(): void
     {
-        $this->entityManager = $this->createMock(EntityManagerInterface::class);
-        $this->updateService = $this->createMock(InventoryUpdateService::class);
-        $this->hotelRepository = $this->createMock(HotelRepository::class);
-        $this->roomTypeRepository = $this->createMock(RoomTypeRepository::class);
-        $this->contractRepository = $this->createMock(HotelContractRepository::class);
-        $this->dailyInventoryRepository = $this->createMock(DailyInventoryRepository::class);
-        $this->logger = $this->createMock(LoggerInterface::class);
-        
-        $this->service = new PriceManagementService(
-            $this->entityManager,
-            $this->updateService,
-            $this->hotelRepository,
-            $this->roomTypeRepository,
-            $this->contractRepository,
-            $this->dailyInventoryRepository,
-            $this->logger
-        );
+        // Setup for service tests
     }
 
-    public function testServiceCanBeInstantiated(): void
+    private function getPriceManagementService(): PriceManagementService
     {
-        $this->assertInstanceOf(PriceManagementService::class, $this->service);
+        return self::getService(PriceManagementService::class);
     }
 
-    public function testServiceHasRequiredMethods(): void
+    public function testProcessBatchPriceAdjustmentSuccess(): void
     {
-        // 验证服务实例化成功，包含所有必需的方法
-        $this->assertTrue(true, 'Service was instantiated successfully with all required methods');
+        // 准备测试数据
+        $params = [
+            'hotel_id' => 1,
+            'room_type_id' => 2,
+            'start_date' => '2024-01-01',
+            'end_date' => '2024-01-31',
+            'price_type' => 'cost_price',
+            'adjust_method' => 'fixed',
+            'price_value' => 100.00,
+            'day_filter' => 'all',
+            'reason' => '测试调价',
+        ];
+
+        // 执行测试 - 主要验证方法不抛出异常
+        $result = $this->getPriceManagementService()->processBatchPriceAdjustment($params);
+
+        // 验证结果包含预期的键
+        $this->assertArrayHasKey('success', $result);
+        $this->assertArrayHasKey('message', $result);
+    }
+
+    public function testProcessBatchPriceAdjustmentWithInvalidHotel(): void
+    {
+        // 准备测试数据
+        $params = [
+            'hotel_id' => 999, // 不存在的酒店ID
+            'room_type_id' => 2,
+            'start_date' => '2024-01-01',
+            'end_date' => '2024-01-31',
+            'price_type' => 'cost_price',
+            'adjust_method' => 'fixed',
+            'price_value' => 100.00,
+            'day_filter' => 'all',
+            'reason' => '测试调价',
+        ];
+
+        // 执行测试
+        $result = $this->getPriceManagementService()->processBatchPriceAdjustment($params);
+
+        // 验证结果包含预期的键
+        $this->assertArrayHasKey('success', $result);
+        $this->assertArrayHasKey('message', $result);
+    }
+
+    public function testUpdateContractPriceSuccess(): void
+    {
+        // 准备测试数据
+        $inventoryId = 1;
+        $costPrice = '100.50';
+
+        // 执行测试 - 主要验证方法不抛出异常
+        $result = $this->getPriceManagementService()->updateContractPrice($inventoryId, $costPrice);
+
+        // 验证结果包含预期的键
+        $this->assertArrayHasKey('success', $result);
+        $this->assertArrayHasKey('message', $result);
+    }
+
+    public function testUpdateContractPriceWithInvalidInventory(): void
+    {
+        // 准备测试数据
+        $inventoryId = 999; // 不存在的库存ID
+        $costPrice = '100.50';
+
+        // 执行测试
+        $result = $this->getPriceManagementService()->updateContractPrice($inventoryId, $costPrice);
+
+        // 验证结果包含预期的键
+        $this->assertArrayHasKey('success', $result);
+        $this->assertArrayHasKey('message', $result);
+    }
+
+    public function testUpdateSellingPriceSuccess(): void
+    {
+        // 准备测试数据
+        $inventoryId = 1;
+        $sellingPrice = '150.75';
+
+        // 执行测试 - 主要验证方法不抛出异常
+        $result = $this->getPriceManagementService()->updateSellingPrice($inventoryId, $sellingPrice);
+
+        // 验证结果包含预期的键
+        $this->assertArrayHasKey('success', $result);
+        $this->assertArrayHasKey('message', $result);
+    }
+
+    public function testUpdateSellingPriceWithInvalidInventory(): void
+    {
+        // 准备测试数据
+        $inventoryId = 999; // 不存在的库存ID
+        $sellingPrice = '150.75';
+
+        // 执行测试
+        $result = $this->getPriceManagementService()->updateSellingPrice($inventoryId, $sellingPrice);
+
+        // 验证结果包含预期的键
+        $this->assertArrayHasKey('success', $result);
+        $this->assertArrayHasKey('message', $result);
     }
 }

@@ -26,7 +26,7 @@ enum DailyInventoryStatusEnum: string implements Labelable, Itemable, Selectable
 
     public function getLabel(): string
     {
-        return match($this) {
+        return match ($this) {
             self::AVAILABLE => '可售',
             self::SOLD => '已售',
             self::PENDING => '待确认',

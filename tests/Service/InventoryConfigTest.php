@@ -2,34 +2,38 @@
 
 namespace Tourze\HotelContractBundle\Tests\Service;
 
-use Doctrine\ORM\EntityManagerInterface;
-use PHPUnit\Framework\MockObject\MockObject;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 use Tourze\EnvManageBundle\Entity\Env;
-use Tourze\EnvManageBundle\Repository\EnvRepository;
+use Tourze\EnvManageBundle\Service\EnvService;
 use Tourze\HotelContractBundle\Service\InventoryConfig;
 
-class InventoryConfigTest extends TestCase
+/**
+ * @internal
+ */
+#[CoversClass(InventoryConfig::class)]
+final class InventoryConfigTest extends TestCase
 {
-    private EnvRepository&MockObject $envRepository;
-    private EntityManagerInterface&MockObject $entityManager;
+    private EnvService $envService;
+
     private InventoryConfig $inventoryConfig;
 
     protected function setUp(): void
     {
-        $this->envRepository = $this->createMock(EnvRepository::class);
-        $this->entityManager = $this->createMock(EntityManagerInterface::class);
-        $this->inventoryConfig = new InventoryConfig($this->envRepository, $this->entityManager);
+        parent::setUp();
+        // Setup for service tests - use default empty envService
+        $this->envService = $this->createTestEnvService();
+        $this->inventoryConfig = new InventoryConfig($this->envService);
     }
 
-    public function test_getWarningConfig_returnsDefaultWhenNoEnvFound(): void
+    private function getInventoryConfig(): InventoryConfig
     {
-        // Mock没有找到任何环境变量
-        $this->envRepository->expects($this->exactly(4))
-            ->method('findOneBy')
-            ->willReturn(null);
+        return $this->inventoryConfig;
+    }
 
-        $config = $this->inventoryConfig->getWarningConfig();
+    public function testGetWarningConfigReturnsDefaultWhenNoEnvFound(): void
+    {
+        $config = $this->getInventoryConfig()->getWarningConfig();
 
         $expectedConfig = [
             'warning_threshold' => 10,
@@ -41,7 +45,7 @@ class InventoryConfigTest extends TestCase
         $this->assertEquals($expectedConfig, $config);
     }
 
-    public function test_getWarningConfig_returnsConfigFromEnv(): void
+    public function testGetWarningConfigReturnsConfigFromEnv(): void
     {
         // 准备测试数据
         $envs = [
@@ -51,14 +55,11 @@ class InventoryConfigTest extends TestCase
             'INVENTORY_WARNING_INTERVAL' => $this->createEnv('INVENTORY_WARNING_INTERVAL', '48'),
         ];
 
-        $this->envRepository->expects($this->exactly(4))
-            ->method('findOneBy')
-            ->willReturnCallback(function ($criteria) use ($envs) {
-                $name = $criteria['name'];
-                return $envs[$name] ?? null;
-            });
+        // Create a new InventoryConfig instance with custom env service
+        $envService = $this->createTestEnvService($envs);
+        $inventoryConfig = new InventoryConfig($envService);
 
-        $config = $this->inventoryConfig->getWarningConfig();
+        $config = $inventoryConfig->getWarningConfig();
 
         $expectedConfig = [
             'warning_threshold' => 15,
@@ -70,7 +71,7 @@ class InventoryConfigTest extends TestCase
         $this->assertEquals($expectedConfig, $config);
     }
 
-    public function test_getWarningConfig_typeConversions(): void
+    public function testGetWarningConfigTypeConversions(): void
     {
         // 测试类型转换功能
         $envs = [
@@ -79,14 +80,11 @@ class InventoryConfigTest extends TestCase
             'INVENTORY_WARNING_INTERVAL' => $this->createEnv('INVENTORY_WARNING_INTERVAL', '12.8'), // 应转为int 12
         ];
 
-        $this->envRepository->expects($this->exactly(4))
-            ->method('findOneBy')
-            ->willReturnCallback(function ($criteria) use ($envs) {
-                $name = $criteria['name'];
-                return $envs[$name] ?? null;
-            });
+        // Create a new InventoryConfig instance with custom env service
+        $envService = $this->createTestEnvService($envs);
+        $inventoryConfig = new InventoryConfig($envService);
 
-        $config = $this->inventoryConfig->getWarningConfig();
+        $config = $inventoryConfig->getWarningConfig();
 
         $this->assertIsInt($config['warning_threshold']);
         $this->assertEquals(5, $config['warning_threshold']);
@@ -96,16 +94,11 @@ class InventoryConfigTest extends TestCase
         $this->assertEquals(12, $config['warning_interval']);
     }
 
-    public function test_saveWarningConfig_savesSuccessfully(): void
+    public function testSaveWarningConfigSavesSuccessfully(): void
     {
         $config = [
             'warning_threshold' => 20,
         ];
-
-        // saveWarningConfig只会调用config中实际存在的键
-        $this->envRepository->expects($this->any())
-            ->method('findOneBy')
-            ->willReturn(null);
 
         // 简化测试，只验证方法执行不抛异常
         $result = $this->inventoryConfig->saveWarningConfig($config);
@@ -114,7 +107,7 @@ class InventoryConfigTest extends TestCase
         $this->assertTrue($result);
     }
 
-    public function test_saveWarningConfig_skipsUndefinedKeys(): void
+    public function testSaveWarningConfigSkipsUndefinedKeys(): void
     {
         // 只传入部分配置
         $config = [
@@ -122,18 +115,13 @@ class InventoryConfigTest extends TestCase
             'undefined_key' => 'should_be_ignored',
         ];
 
-        // 只有1个有效的配置键会被查询
-        $this->envRepository->expects($this->any())
-            ->method('findOneBy')
-            ->willReturn(null);
-
         $result = $this->inventoryConfig->saveWarningConfig($config);
-        
+
         // 验证方法执行成功
         $this->assertTrue($result);
     }
 
-    public function test_getWarningConfig_handlesPartialConfig(): void
+    public function testGetWarningConfigHandlesPartialConfig(): void
     {
         // 只设置部分配置，其他使用默认值
         $envs = [
@@ -141,14 +129,11 @@ class InventoryConfigTest extends TestCase
             'INVENTORY_ENABLE_WARNING' => $this->createEnv('INVENTORY_ENABLE_WARNING', 'false'),
         ];
 
-        $this->envRepository->expects($this->exactly(4))
-            ->method('findOneBy')
-            ->willReturnCallback(function ($criteria) use ($envs) {
-                $name = $criteria['name'];
-                return $envs[$name] ?? null;
-            });
+        // Create a new InventoryConfig instance with custom env service
+        $envService = $this->createTestEnvService($envs);
+        $inventoryConfig = new InventoryConfig($envService);
 
-        $config = $this->inventoryConfig->getWarningConfig();
+        $config = $inventoryConfig->getWarningConfig();
 
         $expectedConfig = [
             'warning_threshold' => 25,      // 来自环境变量
@@ -160,33 +145,18 @@ class InventoryConfigTest extends TestCase
         $this->assertEquals($expectedConfig, $config);
     }
 
-    public function test_getWarningConfig_booleanConversion(): void
+    public function testGetWarningConfigBooleanConversion(): void
     {
-        // 测试各种布尔值转换
-        $testCases = [
-            ['true', true],
-            ['false', false],
-            ['1', true],
-            ['0', false],
-            ['yes', true],
-            ['no', false],
-            ['on', true],
-            ['off', false],
+        // 简化测试，只测试一个典型的布尔值转换
+        $envs = [
+            'INVENTORY_ENABLE_WARNING' => $this->createEnv('INVENTORY_ENABLE_WARNING', 'false'),
         ];
 
-        // 简化测试，只测试一个典型的布尔值转换
-        $env = $this->createEnv('INVENTORY_ENABLE_WARNING', 'false');
+        // Create a new InventoryConfig instance with custom env service
+        $envService = $this->createTestEnvService($envs);
+        $inventoryConfig = new InventoryConfig($envService);
 
-        $this->envRepository->expects($this->exactly(4))
-            ->method('findOneBy')
-            ->willReturnCallback(function ($criteria) use ($env) {
-                if ($criteria['name'] === 'INVENTORY_ENABLE_WARNING') {
-                    return $env;
-                }
-                return null;
-            });
-
-        $config = $this->inventoryConfig->getWarningConfig();
+        $config = $inventoryConfig->getWarningConfig();
         $this->assertFalse($config['enable_warning']);
     }
 
@@ -196,6 +166,47 @@ class InventoryConfigTest extends TestCase
         $env->setName($name);
         $env->setValue($value);
         $env->setValid(true);
+
         return $env;
+    }
+
+    /**
+     * @param array<string, Env|null> $envData
+     */
+    private function createTestEnvService(array $envData = []): EnvService
+    {
+        return new class($envData) implements EnvService {
+            /**
+             * @param array<string, Env|null> $envData
+             */
+            public function __construct(private array $envData = [])
+            {
+            }
+
+            public function fetchPublicArray(): array
+            {
+                return [];
+            }
+
+            public function findByName(string $name): ?Env
+            {
+                return $this->envData[$name] ?? null;
+            }
+
+            public function findByNameAndValid(string $name, bool $valid = true): ?Env
+            {
+                $env = $this->envData[$name] ?? null;
+                if (null !== $env && $env->isValid() === $valid) {
+                    return $env;
+                }
+
+                return null;
+            }
+
+            public function saveEnv(Env $env): void
+            {
+                $this->envData[$env->getName()] = $env;
+            }
+        };
     }
 }

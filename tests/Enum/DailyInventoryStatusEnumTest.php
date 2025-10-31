@@ -2,44 +2,34 @@
 
 namespace Tourze\HotelContractBundle\Tests\Enum;
 
-use PHPUnit\Framework\TestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\TestWith;
 use Tourze\HotelContractBundle\Enum\DailyInventoryStatusEnum;
+use Tourze\PHPUnitEnum\AbstractEnumTestCase;
 
-class DailyInventoryStatusEnumTest extends TestCase
+/**
+ * @internal
+ */
+#[CoversClass(DailyInventoryStatusEnum::class)]
+final class DailyInventoryStatusEnumTest extends AbstractEnumTestCase
 {
-    public function test_enumCases_haveCorrectValues(): void
+    #[TestWith([DailyInventoryStatusEnum::AVAILABLE, 'available', '可售'])]
+    #[TestWith([DailyInventoryStatusEnum::SOLD, 'sold', '已售'])]
+    #[TestWith([DailyInventoryStatusEnum::PENDING, 'pending', '待确认'])]
+    #[TestWith([DailyInventoryStatusEnum::RESERVED, 'reserved', '预留'])]
+    #[TestWith([DailyInventoryStatusEnum::DISABLED, 'disabled', '禁用'])]
+    #[TestWith([DailyInventoryStatusEnum::CANCELLED, 'cancelled', '已取消'])]
+    #[TestWith([DailyInventoryStatusEnum::REFUNDED, 'refunded', '已退款'])]
+    public function testEnumValueAndLabel(DailyInventoryStatusEnum $enum, string $expectedValue, string $expectedLabel): void
     {
-        $this->assertSame('available', DailyInventoryStatusEnum::AVAILABLE->value);
-        $this->assertSame('sold', DailyInventoryStatusEnum::SOLD->value);
-        $this->assertSame('pending', DailyInventoryStatusEnum::PENDING->value);
-        $this->assertSame('reserved', DailyInventoryStatusEnum::RESERVED->value);
-        $this->assertSame('disabled', DailyInventoryStatusEnum::DISABLED->value);
-        $this->assertSame('cancelled', DailyInventoryStatusEnum::CANCELLED->value);
-        $this->assertSame('refunded', DailyInventoryStatusEnum::REFUNDED->value);
+        $this->assertSame($expectedValue, $enum->value);
+        $this->assertSame($expectedLabel, $enum->getLabel());
     }
 
-    public function test_getLabel_returnsCorrectLabels(): void
-    {
-        $this->assertSame('可售', DailyInventoryStatusEnum::AVAILABLE->getLabel());
-        $this->assertSame('已售', DailyInventoryStatusEnum::SOLD->getLabel());
-        $this->assertSame('待确认', DailyInventoryStatusEnum::PENDING->getLabel());
-        $this->assertSame('预留', DailyInventoryStatusEnum::RESERVED->getLabel());
-        $this->assertSame('禁用', DailyInventoryStatusEnum::DISABLED->getLabel());
-        $this->assertSame('已取消', DailyInventoryStatusEnum::CANCELLED->getLabel());
-        $this->assertSame('已退款', DailyInventoryStatusEnum::REFUNDED->getLabel());
-    }
-
-    public function test_implementsInterfaces(): void
-    {
-        $this->assertInstanceOf(\Tourze\EnumExtra\Labelable::class, DailyInventoryStatusEnum::AVAILABLE);
-        $this->assertInstanceOf(\Tourze\EnumExtra\Itemable::class, DailyInventoryStatusEnum::AVAILABLE);
-        $this->assertInstanceOf(\Tourze\EnumExtra\Selectable::class, DailyInventoryStatusEnum::AVAILABLE);
-    }
-
-    public function test_allCasesExist(): void
+    public function testAllCasesExist(): void
     {
         $cases = DailyInventoryStatusEnum::cases();
-        
+
         $this->assertCount(7, $cases);
         $this->assertContains(DailyInventoryStatusEnum::AVAILABLE, $cases);
         $this->assertContains(DailyInventoryStatusEnum::SOLD, $cases);
@@ -50,31 +40,79 @@ class DailyInventoryStatusEnumTest extends TestCase
         $this->assertContains(DailyInventoryStatusEnum::REFUNDED, $cases);
     }
 
-    public function test_canCreateFromValue(): void
+    #[TestWith(['available', DailyInventoryStatusEnum::AVAILABLE])]
+    #[TestWith(['sold', DailyInventoryStatusEnum::SOLD])]
+    #[TestWith(['pending', DailyInventoryStatusEnum::PENDING])]
+    #[TestWith(['reserved', DailyInventoryStatusEnum::RESERVED])]
+    #[TestWith(['disabled', DailyInventoryStatusEnum::DISABLED])]
+    #[TestWith(['cancelled', DailyInventoryStatusEnum::CANCELLED])]
+    #[TestWith(['refunded', DailyInventoryStatusEnum::REFUNDED])]
+    public function testFromReturnsCorrectEnum(string $value, DailyInventoryStatusEnum $expectedEnum): void
     {
-        $this->assertSame(DailyInventoryStatusEnum::AVAILABLE, DailyInventoryStatusEnum::from('available'));
-        $this->assertSame(DailyInventoryStatusEnum::SOLD, DailyInventoryStatusEnum::from('sold'));
-        $this->assertSame(DailyInventoryStatusEnum::PENDING, DailyInventoryStatusEnum::from('pending'));
-        $this->assertSame(DailyInventoryStatusEnum::RESERVED, DailyInventoryStatusEnum::from('reserved'));
-        $this->assertSame(DailyInventoryStatusEnum::DISABLED, DailyInventoryStatusEnum::from('disabled'));
-        $this->assertSame(DailyInventoryStatusEnum::CANCELLED, DailyInventoryStatusEnum::from('cancelled'));
-        $this->assertSame(DailyInventoryStatusEnum::REFUNDED, DailyInventoryStatusEnum::from('refunded'));
+        $this->assertSame($expectedEnum, DailyInventoryStatusEnum::from($value));
     }
 
-    public function test_from_throwsException_withInvalidValue(): void
+    #[TestWith(['invalid_value'])]
+    #[TestWith([''])]
+    #[TestWith(['null'])]
+    #[TestWith(['unknown'])]
+    #[TestWith(['active'])]
+    #[TestWith(['inactive'])]
+    #[TestWith(['processing'])]
+    public function testFromThrowsValueErrorWithInvalidValue(string $invalidValue): void
     {
         $this->expectException(\ValueError::class);
-        DailyInventoryStatusEnum::from('invalid');
+        DailyInventoryStatusEnum::from($invalidValue);
     }
 
-    public function test_tryFrom_returnsNull_withInvalidValue(): void
+    #[TestWith(['available', DailyInventoryStatusEnum::AVAILABLE])]
+    #[TestWith(['sold', DailyInventoryStatusEnum::SOLD])]
+    #[TestWith(['pending', DailyInventoryStatusEnum::PENDING])]
+    #[TestWith(['reserved', DailyInventoryStatusEnum::RESERVED])]
+    #[TestWith(['disabled', DailyInventoryStatusEnum::DISABLED])]
+    #[TestWith(['cancelled', DailyInventoryStatusEnum::CANCELLED])]
+    #[TestWith(['refunded', DailyInventoryStatusEnum::REFUNDED])]
+    public function testTryFromReturnsEnumWithValidValue(string $value, DailyInventoryStatusEnum $expectedEnum): void
     {
-        $this->assertNull(DailyInventoryStatusEnum::tryFrom('invalid'));
+        $this->assertSame($expectedEnum, DailyInventoryStatusEnum::tryFrom($value));
     }
 
-    public function test_tryFrom_returnsEnum_withValidValue(): void
+    #[TestWith(['invalid_value'])]
+    #[TestWith([''])]
+    #[TestWith(['null'])]
+    #[TestWith(['unknown'])]
+    #[TestWith(['active'])]
+    #[TestWith(['inactive'])]
+    #[TestWith(['processing'])]
+    public function testTryFromReturnsNullWithInvalidValue(string $invalidValue): void
     {
-        $this->assertSame(DailyInventoryStatusEnum::AVAILABLE, DailyInventoryStatusEnum::tryFrom('available'));
-        $this->assertSame(DailyInventoryStatusEnum::SOLD, DailyInventoryStatusEnum::tryFrom('sold'));
+        $this->assertNull(DailyInventoryStatusEnum::tryFrom($invalidValue));
     }
-} 
+
+    public function testValuesAreUnique(): void
+    {
+        $values = array_map(fn (DailyInventoryStatusEnum $case) => $case->value, DailyInventoryStatusEnum::cases());
+        $uniqueValues = array_unique($values);
+
+        $this->assertCount(count($values), $uniqueValues, 'All enum values must be unique');
+    }
+
+    public function testLabelsAreUnique(): void
+    {
+        $labels = array_map(fn (DailyInventoryStatusEnum $case) => $case->getLabel(), DailyInventoryStatusEnum::cases());
+        $uniqueLabels = array_unique($labels);
+
+        $this->assertCount(count($labels), $uniqueLabels, 'All enum labels must be unique');
+    }
+
+    public function testToArray(): void
+    {
+        $result = DailyInventoryStatusEnum::AVAILABLE->toArray();
+
+        // 验证返回的数组包含预期的键值对
+        $this->assertArrayHasKey('value', $result);
+        $this->assertArrayHasKey('label', $result);
+        $this->assertSame('available', $result['value']);
+        $this->assertSame('可售', $result['label']);
+    }
+}

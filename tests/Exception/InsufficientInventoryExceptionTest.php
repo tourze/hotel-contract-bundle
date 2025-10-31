@@ -1,16 +1,24 @@
 <?php
 
-namespace Tourze\HotelContractBundle\Tests\Unit\Exception;
+namespace Tourze\HotelContractBundle\Tests\Exception;
 
-use PHPUnit\Framework\TestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
 use Tourze\HotelContractBundle\Exception\InsufficientInventoryException;
+use Tourze\PHPUnitBase\AbstractExceptionTestCase;
 
-class InsufficientInventoryExceptionTest extends TestCase
+/**
+ * @internal
+ */
+#[CoversClass(InsufficientInventoryException::class)]
+final class InsufficientInventoryExceptionTest extends AbstractExceptionTestCase
 {
     public function testCanBeCreated(): void
     {
         $exception = new InsufficientInventoryException();
-        $this->assertInstanceOf(InsufficientInventoryException::class, $exception);
+
+        // 验证异常实例的类型和基本属性
+        $this->assertInstanceOf(\RuntimeException::class, $exception);
+        $this->assertInstanceOf(\Throwable::class, $exception);
     }
 
     public function testCanBeCreatedWithMessage(): void

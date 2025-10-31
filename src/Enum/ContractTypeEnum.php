@@ -21,7 +21,7 @@ enum ContractTypeEnum: string implements Labelable, Itemable, Selectable
 
     public function getLabel(): string
     {
-        return match($this) {
+        return match ($this) {
             self::FIXED_PRICE => '固定总价',
             self::DYNAMIC_PRICE => '动态打包价',
         };

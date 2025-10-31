@@ -1,16 +1,24 @@
 <?php
 
-namespace Tourze\HotelContractBundle\Tests\Unit\Exception;
+namespace Tourze\HotelContractBundle\Tests\Exception;
 
-use PHPUnit\Framework\TestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
 use Tourze\HotelContractBundle\Exception\ContractStatusInvalidException;
+use Tourze\PHPUnitBase\AbstractExceptionTestCase;
 
-class ContractStatusInvalidExceptionTest extends TestCase
+/**
+ * @internal
+ */
+#[CoversClass(ContractStatusInvalidException::class)]
+final class ContractStatusInvalidExceptionTest extends AbstractExceptionTestCase
 {
     public function testCanBeCreated(): void
     {
         $exception = new ContractStatusInvalidException();
-        $this->assertInstanceOf(ContractStatusInvalidException::class, $exception);
+
+        // 验证异常实例的类型和基本属性
+        $this->assertInstanceOf(\InvalidArgumentException::class, $exception);
+        $this->assertInstanceOf(\Throwable::class, $exception);
     }
 
     public function testCanBeCreatedWithMessage(): void

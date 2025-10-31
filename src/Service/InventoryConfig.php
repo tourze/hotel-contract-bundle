@@ -2,9 +2,8 @@
 
 namespace Tourze\HotelContractBundle\Service;
 
-use Doctrine\ORM\EntityManagerInterface;
 use Tourze\EnvManageBundle\Entity\Env;
-use Tourze\EnvManageBundle\Repository\EnvRepository;
+use Tourze\EnvManageBundle\Service\EnvService;
 
 class InventoryConfig
 {
@@ -17,22 +16,22 @@ class InventoryConfig
     ];
 
     public function __construct(
-        private readonly EnvRepository $envRepository,
-        private readonly EntityManagerInterface $entityManager,
-    ) {}
+        private readonly EnvService $envService,
+    ) {
+    }
 
     /**
      * 读取库存预警配置
      *
-     * @return array 库存预警配置
+     * @return array<string, mixed> 库存预警配置
      */
     public function getWarningConfig(): array
     {
         $config = $this->getDefaultConfig();
 
         foreach (self::CONFIG_KEYS as $key => $envName) {
-            $env = $this->envRepository->findOneBy(['name' => $envName, 'valid' => true]);
-            if ($env !== null) {
+            $env = $this->envService->findByNameAndValid($envName, true);
+            if (null !== $env) {
                 $value = $env->getValue();
 
                 // 根据配置项类型转换值
@@ -50,7 +49,8 @@ class InventoryConfig
     /**
      * 保存库存预警配置
      *
-     * @param array $config 库存预警配置
+     * @param array<string, mixed> $config 库存预警配置
+     *
      * @return bool 是否保存成功
      */
     public function saveWarningConfig(array $config): bool
@@ -61,17 +61,9 @@ class InventoryConfig
                     continue;
                 }
 
-                $env = $this->envRepository->findOneBy(['name' => $envName]) ?? new Env();
-                $env->setName($envName);
-                $env->setValue((string) $config[$key]);
-                $env->setRemark($this->getRemarkForKey($key));
-                $env->setValid(true);
-                $env->setSync(true);
-
-                $this->entityManager->persist($env);
+                $this->saveConfigItem($envName, $key, $config[$key]);
             }
 
-            $this->entityManager->flush();
             return true;
         } catch (\Throwable) {
             return false;
@@ -79,9 +71,65 @@ class InventoryConfig
     }
 
     /**
+     * 保存单个配置项
+     *
+     * @param string $envName 环境变量名称
+     * @param string $key 配置键名
+     * @param mixed $value 配置值
+     */
+    private function saveConfigItem(string $envName, string $key, mixed $value): void
+    {
+        $stringValue = $this->convertValueToString($value);
+        if (null === $stringValue) {
+            return;
+        }
+
+        $env = $this->envService->findByName($envName) ?? new Env();
+        $env->setName($envName);
+        $env->setValue($stringValue);
+        $env->setRemark($this->getRemarkForKey($key));
+        $env->setValid(true);
+        $env->setSync(true);
+
+        $this->envService->saveEnv($env);
+    }
+
+    /**
+     * 将配置值转换为字符串
+     *
+     * @param mixed $value 配置值
+     *
+     * @return string|null 转换后的字符串，无法转换时返回null
+     */
+    private function convertValueToString(mixed $value): ?string
+    {
+        if (is_bool($value)) {
+            return $value ? 'true' : 'false';
+        }
+
+        if (is_string($value)) {
+            return $value;
+        }
+
+        if (is_numeric($value)) {
+            return (string) $value;
+        }
+
+        if (is_array($value)) {
+            return json_encode($value, JSON_THROW_ON_ERROR);
+        }
+
+        if (is_object($value) && method_exists($value, '__toString')) {
+            return (string) $value;
+        }
+
+        return null;
+    }
+
+    /**
      * 获取默认配置
      *
-     * @return array 默认配置
+     * @return array<string, mixed> 默认配置
      */
     private function getDefaultConfig(): array
     {
@@ -97,6 +145,7 @@ class InventoryConfig
      * 获取配置项的备注说明
      *
      * @param string $key 配置项键名
+     *
      * @return string 备注说明
      */
     private function getRemarkForKey(string $key): string

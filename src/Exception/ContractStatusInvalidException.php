@@ -10,4 +10,4 @@ namespace Tourze\HotelContractBundle\Exception;
  */
 class ContractStatusInvalidException extends \InvalidArgumentException
 {
-} 
+}

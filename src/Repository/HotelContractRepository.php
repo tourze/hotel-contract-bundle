@@ -6,17 +6,14 @@ use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 use Tourze\HotelContractBundle\Entity\HotelContract;
 use Tourze\HotelContractBundle\Enum\ContractStatusEnum;
+use Tourze\PHPUnitSymfonyKernelTest\Attribute\AsRepository;
 
 /**
  * 酒店合同仓库类
  *
  * @extends ServiceEntityRepository<HotelContract>
- *
- * @method HotelContract|null find($id, $lockMode = null, $lockVersion = null)
- * @method HotelContract|null findOneBy(array $criteria, array $orderBy = null)
- * @method HotelContract[]    findAll()
- * @method HotelContract[]    findBy(array $criteria, array $orderBy = null, $limit = null, $offset = null)
  */
+#[AsRepository(entityClass: HotelContract::class)]
 class HotelContractRepository extends ServiceEntityRepository
 {
     public function __construct(ManagerRegistry $registry)
@@ -24,10 +21,7 @@ class HotelContractRepository extends ServiceEntityRepository
         parent::__construct($registry, HotelContract::class);
     }
 
-    /**
-     * 保存酒店合同实体
-     */
-    public function save(HotelContract $entity, bool $flush = false): void
+    public function save(HotelContract $entity, bool $flush = true): void
     {
         $this->getEntityManager()->persist($entity);
 
@@ -36,10 +30,7 @@ class HotelContractRepository extends ServiceEntityRepository
         }
     }
 
-    /**
-     * 删除酒店合同实体
-     */
-    public function remove(HotelContract $entity, bool $flush = false): void
+    public function remove(HotelContract $entity, bool $flush = true): void
     {
         $this->getEntityManager()->remove($entity);
 
@@ -50,28 +41,36 @@ class HotelContractRepository extends ServiceEntityRepository
 
     /**
      * 查找某酒店的所有合同
+     *
+     * @return HotelContract[]
      */
     public function findByHotelId(int $hotelId): array
     {
+        /** @var HotelContract[] */
         return $this->createQueryBuilder('hc')
             ->andWhere('hc.hotel = :hotelId')
             ->setParameter('hotelId', $hotelId)
             ->orderBy('hc.priority', 'DESC')
             ->getQuery()
-            ->getResult();
+            ->getResult()
+        ;
     }
 
     /**
      * 查找生效中的合同
+     *
+     * @return HotelContract[]
      */
     public function findActiveContracts(): array
     {
+        /** @var HotelContract[] */
         return $this->createQueryBuilder('hc')
             ->andWhere('hc.status = :status')
             ->setParameter('status', ContractStatusEnum::ACTIVE)
             ->orderBy('hc.id', 'ASC')
             ->getQuery()
-            ->getResult();
+            ->getResult()
+        ;
     }
 
     /**
@@ -79,18 +78,24 @@ class HotelContractRepository extends ServiceEntityRepository
      */
     public function findByContractNo(string $contractNo): ?HotelContract
     {
-        return $this->createQueryBuilder('hc')
+        $result = $this->createQueryBuilder('hc')
             ->andWhere('hc.contractNo = :contractNo')
             ->setParameter('contractNo', $contractNo)
             ->getQuery()
-            ->getOneOrNullResult();
+            ->getOneOrNullResult()
+        ;
+
+        return $result instanceof HotelContract ? $result : null;
     }
 
     /**
      * 查找时间范围内有效的合同
+     *
+     * @return HotelContract[]
      */
     public function findContractsInDateRange(\DateTimeInterface $startDate, \DateTimeInterface $endDate): array
     {
+        /** @var HotelContract[] */
         return $this->createQueryBuilder('hc')
             ->andWhere('hc.status = :status')
             ->andWhere('hc.startDate <= :endDate')
@@ -100,6 +105,7 @@ class HotelContractRepository extends ServiceEntityRepository
             ->setParameter('endDate', $endDate)
             ->orderBy('hc.priority', 'DESC')
             ->getQuery()
-            ->getResult();
+            ->getResult()
+        ;
     }
 }

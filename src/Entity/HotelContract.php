@@ -6,8 +6,8 @@ use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
-use Stringable;
 use Symfony\Component\Validator\Constraints as Assert;
+use Tourze\DoctrineIndexedBundle\Attribute\IndexColumn;
 use Tourze\DoctrineTimestampBundle\Traits\TimestampableAware;
 use Tourze\DoctrineUserBundle\Traits\CreatedByAware;
 use Tourze\HotelContractBundle\Enum\ContractStatusEnum;
@@ -17,18 +17,21 @@ use Tourze\HotelProfileBundle\Entity\Hotel;
 
 #[ORM\Entity(repositoryClass: HotelContractRepository::class)]
 #[ORM\Table(name: 'hotel_contract', options: ['comment' => '酒店合同信息表'])]
-#[ORM\Index(name: 'hotel_contract_idx_contract_no', columns: ['contract_no'])]
-#[ORM\Index(name: 'hotel_contract_idx_hotel_id', columns: ['hotel_id'])]
-class HotelContract implements Stringable
+#[ORM\Index(name: 'hotel_contract_idx_hotel_priority', columns: ['hotel_id', 'priority'])]
+class HotelContract implements \Stringable
 {
     use TimestampableAware;
     use CreatedByAware;
+
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column(type: Types::BIGINT, options: ['comment' => '主键ID'])]
     private ?int $id = null;
 
+    #[IndexColumn]
     #[ORM\Column(type: Types::STRING, length: 50, unique: true, options: ['comment' => '合同编号'])]
+    #[Assert\NotBlank(message: '合同编号不能为空')]
+    #[Assert\Length(max: 50, maxMessage: '合同编号长度不能超过 {{ limit }} 个字符')]
     private string $contractNo = '';
 
     #[ORM\ManyToOne]
@@ -36,12 +39,15 @@ class HotelContract implements Stringable
     private ?Hotel $hotel = null;
 
     #[ORM\Column(type: Types::STRING, length: 20, enumType: ContractTypeEnum::class, options: ['comment' => '合同类型'])]
+    #[Assert\Choice(callback: [ContractTypeEnum::class, 'cases'])]
     private ContractTypeEnum $contractType = ContractTypeEnum::FIXED_PRICE;
 
     #[ORM\Column(type: Types::DATE_IMMUTABLE, options: ['comment' => '合同开始日期'])]
+    #[Assert\NotNull(message: '合同开始日期不能为空')]
     private ?\DateTimeInterface $startDate = null;
 
     #[ORM\Column(type: Types::DATE_IMMUTABLE, options: ['comment' => '合同结束日期'])]
+    #[Assert\NotNull(message: '合同结束日期不能为空')]
     private ?\DateTimeInterface $endDate = null;
 
     #[ORM\Column(type: Types::INTEGER, options: ['comment' => '合同总房间数'])]
@@ -54,24 +60,35 @@ class HotelContract implements Stringable
 
     #[ORM\Column(type: Types::DECIMAL, precision: 10, scale: 2, options: ['comment' => '合同总金额'])]
     #[Assert\PositiveOrZero]
+    #[Assert\Length(max: 13)]
     private string $totalAmount = '0.00';
 
     #[ORM\Column(type: Types::STRING, length: 255, nullable: true, options: ['comment' => '合同附件URL'])]
+    #[Assert\Length(max: 255)]
+    #[Assert\Url]
     private ?string $attachmentUrl = null;
 
     #[ORM\Column(type: Types::STRING, length: 20, enumType: ContractStatusEnum::class, options: ['comment' => '合同状态'])]
+    #[Assert\Choice(callback: [ContractStatusEnum::class, 'cases'])]
     private ContractStatusEnum $status = ContractStatusEnum::PENDING;
 
     #[ORM\Column(type: Types::TEXT, nullable: true, options: ['comment' => '终止原因'])]
+    #[Assert\Length(max: 65535)]
     private ?string $terminationReason = null;
 
     #[ORM\Column(type: Types::INTEGER, options: ['comment' => '合同优先级'])]
+    #[Assert\Range(min: 0, max: 999)]
     private int $priority = 0;
 
-
+    /**
+     * @var Collection<int, DailyInventory>
+     */
     #[ORM\OneToMany(targetEntity: DailyInventory::class, mappedBy: 'contract', fetch: 'EXTRA_LAZY')]
     private Collection $dailyInventories;
 
+    /**
+     * @var Collection<int, InventorySummary>
+     */
     #[ORM\OneToMany(targetEntity: InventorySummary::class, mappedBy: 'lowestContract', fetch: 'EXTRA_LAZY')]
     private Collection $inventorySummaries;
 
@@ -96,10 +113,9 @@ class HotelContract implements Stringable
         return $this->contractNo;
     }
 
-    public function setContractNo(string $contractNo): self
+    public function setContractNo(string $contractNo): void
     {
         $this->contractNo = $contractNo;
-        return $this;
     }
 
     public function getHotel(): ?Hotel
@@ -107,10 +123,9 @@ class HotelContract implements Stringable
         return $this->hotel;
     }
 
-    public function setHotel(?Hotel $hotel): self
+    public function setHotel(?Hotel $hotel): void
     {
         $this->hotel = $hotel;
-        return $this;
     }
 
     public function getContractType(): ContractTypeEnum
@@ -118,10 +133,9 @@ class HotelContract implements Stringable
         return $this->contractType;
     }
 
-    public function setContractType(ContractTypeEnum $contractType): self
+    public function setContractType(ContractTypeEnum $contractType): void
     {
         $this->contractType = $contractType;
-        return $this;
     }
 
     public function getStartDate(): ?\DateTimeInterface
@@ -129,10 +143,9 @@ class HotelContract implements Stringable
         return $this->startDate;
     }
 
-    public function setStartDate(?\DateTimeInterface $startDate): self
+    public function setStartDate(?\DateTimeInterface $startDate): void
     {
         $this->startDate = $startDate;
-        return $this;
     }
 
     public function getEndDate(): ?\DateTimeInterface
@@ -140,10 +153,9 @@ class HotelContract implements Stringable
         return $this->endDate;
     }
 
-    public function setEndDate(?\DateTimeInterface $endDate): self
+    public function setEndDate(?\DateTimeInterface $endDate): void
     {
         $this->endDate = $endDate;
-        return $this;
     }
 
     public function getTotalRooms(): int
@@ -151,10 +163,9 @@ class HotelContract implements Stringable
         return $this->totalRooms;
     }
 
-    public function setTotalRooms(int $totalRooms): self
+    public function setTotalRooms(int $totalRooms): void
     {
         $this->totalRooms = $totalRooms;
-        return $this;
     }
 
     public function getTotalDays(): int
@@ -162,10 +173,9 @@ class HotelContract implements Stringable
         return $this->totalDays;
     }
 
-    public function setTotalDays(int $totalDays): self
+    public function setTotalDays(int $totalDays): void
     {
         $this->totalDays = $totalDays;
-        return $this;
     }
 
     public function getTotalAmount(): string
@@ -173,10 +183,9 @@ class HotelContract implements Stringable
         return $this->totalAmount;
     }
 
-    public function setTotalAmount(string $totalAmount): self
+    public function setTotalAmount(string $totalAmount): void
     {
         $this->totalAmount = $totalAmount;
-        return $this;
     }
 
     public function getAttachmentUrl(): ?string
@@ -184,10 +193,9 @@ class HotelContract implements Stringable
         return $this->attachmentUrl;
     }
 
-    public function setAttachmentUrl(?string $attachmentUrl): self
+    public function setAttachmentUrl(?string $attachmentUrl): void
     {
         $this->attachmentUrl = $attachmentUrl;
-        return $this;
     }
 
     public function getStatus(): ContractStatusEnum
@@ -195,10 +203,9 @@ class HotelContract implements Stringable
         return $this->status;
     }
 
-    public function setStatus(ContractStatusEnum $status): self
+    public function setStatus(ContractStatusEnum $status): void
     {
         $this->status = $status;
-        return $this;
     }
 
     public function getTerminationReason(): ?string
@@ -206,10 +213,9 @@ class HotelContract implements Stringable
         return $this->terminationReason;
     }
 
-    public function setTerminationReason(?string $terminationReason): self
+    public function setTerminationReason(?string $terminationReason): void
     {
         $this->terminationReason = $terminationReason;
-        return $this;
     }
 
     public function getPriority(): int
@@ -217,12 +223,10 @@ class HotelContract implements Stringable
         return $this->priority;
     }
 
-    public function setPriority(int $priority): self
+    public function setPriority(int $priority): void
     {
         $this->priority = $priority;
-        return $this;
     }
-
 
     /**
      * @return Collection<int, DailyInventory>
@@ -232,25 +236,21 @@ class HotelContract implements Stringable
         return $this->dailyInventories;
     }
 
-    public function addDailyInventory(DailyInventory $dailyInventory): self
+    public function addDailyInventory(DailyInventory $dailyInventory): void
     {
         if (!$this->dailyInventories->contains($dailyInventory)) {
             $this->dailyInventories->add($dailyInventory);
             $dailyInventory->setContract($this);
         }
-
-        return $this;
     }
 
-    public function removeDailyInventory(DailyInventory $dailyInventory): self
+    public function removeDailyInventory(DailyInventory $dailyInventory): void
     {
         if ($this->dailyInventories->removeElement($dailyInventory)) {
             if ($dailyInventory->getContract() === $this) {
                 $dailyInventory->setContract(null);
             }
         }
-
-        return $this;
     }
 
     /**
@@ -261,82 +261,71 @@ class HotelContract implements Stringable
         return $this->inventorySummaries;
     }
 
-    public function addInventorySummary(InventorySummary $inventorySummary): self
+    public function addInventorySummary(InventorySummary $inventorySummary): void
     {
         if (!$this->inventorySummaries->contains($inventorySummary)) {
             $this->inventorySummaries->add($inventorySummary);
             $inventorySummary->setLowestContract($this);
         }
-
-        return $this;
     }
 
-    public function removeInventorySummary(InventorySummary $inventorySummary): self
+    public function removeInventorySummary(InventorySummary $inventorySummary): void
     {
         if ($this->inventorySummaries->removeElement($inventorySummary)) {
             if ($inventorySummary->getLowestContract() === $this) {
                 $inventorySummary->setLowestContract(null);
             }
         }
-
-        return $this;
     }
-
 
     /**
      * 判断合同是否处于激活状态
      */
     public function isActive(): bool
     {
-        return $this->status === ContractStatusEnum::ACTIVE;
+        return ContractStatusEnum::ACTIVE === $this->status;
     }
 
     /**
      * 计算合同总售价
-     *
-     * @return float
      */
     public function getTotalSellingAmount(): float
     {
         $totalSellingAmount = 0.0;
-        
+
         foreach ($this->dailyInventories as $inventory) {
-            $totalSellingAmount += (float)$inventory->getSellingPrice();
+            $totalSellingAmount += (float) $inventory->getSellingPrice();
         }
-        
+
         return $totalSellingAmount;
     }
 
     /**
      * 计算合同总成本
-     *
-     * @return float
      */
     public function getTotalCostAmount(): float
     {
         $totalCostAmount = 0.0;
-        
+
         foreach ($this->dailyInventories as $inventory) {
-            $totalCostAmount += (float)$inventory->getCostPrice();
+            $totalCostAmount += (float) $inventory->getCostPrice();
         }
-        
+
         return $totalCostAmount;
     }
 
     /**
      * 计算合同利润率
-     *
-     * @return float
      */
     public function getProfitRate(): float
     {
         $totalCost = $this->getTotalCostAmount();
         $totalSelling = $this->getTotalSellingAmount();
-        
+
         if ($totalCost > 0) {
             return (($totalSelling - $totalCost) / $totalCost) * 100;
         }
-        
+
         return 0.0;
     }
 }

@@ -10,18 +10,19 @@ use Tourze\HotelContractBundle\Repository\HotelContractRepository;
 /**
  * 获取合同详情控制器
  */
-class GetContractDetailController extends AbstractController
+final class GetContractDetailController extends AbstractController
 {
     public function __construct(
         private readonly HotelContractRepository $hotelContractRepository,
-    ) {}
+    ) {
+    }
 
     #[Route(path: '/admin/api/hotel-contracts/{id}', name: 'admin_api_hotel_contract_detail', methods: ['GET'])]
     public function __invoke(int $id): JsonResponse
     {
         $contract = $this->hotelContractRepository->find($id);
 
-        if ($contract === null) {
+        if (null === $contract) {
             return $this->json(['error' => 'Contract not found'], 404);
         }
 

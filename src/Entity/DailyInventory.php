@@ -4,7 +4,6 @@ namespace Tourze\HotelContractBundle\Entity;
 
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
-use Stringable;
 use Symfony\Component\Validator\Constraints as Assert;
 use Tourze\DoctrineTimestampBundle\Traits\TimestampableAware;
 use Tourze\DoctrineUserBundle\Attribute\UpdatedByColumn;
@@ -19,15 +18,18 @@ use Tourze\HotelProfileBundle\Entity\RoomType;
 #[ORM\Index(name: 'daily_inventory_idx_hotel_date', columns: ['hotel_id', 'date'])]
 #[ORM\Index(name: 'daily_inventory_idx_contract_date', columns: ['contract_id', 'date'])]
 #[ORM\Index(name: 'daily_inventory_idx_date_status', columns: ['date', 'status'])]
-class DailyInventory implements Stringable
+class DailyInventory implements \Stringable
 {
     use TimestampableAware;
+
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column(type: Types::BIGINT, options: ['comment' => '主键ID'])]
     private ?int $id = null;
 
     #[ORM\Column(type: Types::STRING, length: 100, unique: true, options: ['comment' => '库存唯一编码'])]
+    #[Assert\NotBlank(message: '库存编码不能为空')]
+    #[Assert\Length(max: 100, maxMessage: '库存编码长度不能超过 {{ limit }} 个字符')]
     private string $code = '';
 
     #[ORM\ManyToOne]
@@ -39,12 +41,15 @@ class DailyInventory implements Stringable
     private ?Hotel $hotel = null;
 
     #[ORM\Column(type: Types::DATE_IMMUTABLE, options: ['comment' => '库存日期'])]
+    #[Assert\NotNull(message: '库存日期不能为空')]
     private ?\DateTimeInterface $date = null;
 
     #[ORM\Column(type: Types::BOOLEAN, options: ['comment' => '是否为机动预留'])]
+    #[Assert\Type(type: 'boolean')]
     private bool $isReserved = false;
 
     #[ORM\Column(type: Types::STRING, length: 20, enumType: DailyInventoryStatusEnum::class, options: ['comment' => '库存状态'])]
+    #[Assert\Choice(callback: [DailyInventoryStatusEnum::class, 'cases'])]
     private DailyInventoryStatusEnum $status = DailyInventoryStatusEnum::AVAILABLE;
 
     #[ORM\ManyToOne]
@@ -53,27 +58,32 @@ class DailyInventory implements Stringable
 
     #[ORM\Column(type: Types::DECIMAL, precision: 10, scale: 2, options: ['comment' => '该日采购成本价'])]
     #[Assert\PositiveOrZero]
+    #[Assert\Length(max: 13)]
     private string $costPrice = '0.00';
 
     #[ORM\Column(type: Types::DECIMAL, precision: 10, scale: 2, options: ['comment' => '该日销售价格'])]
     #[Assert\PositiveOrZero]
+    #[Assert\Length(max: 13)]
     private string $sellingPrice = '0.00';
 
     #[ORM\Column(type: Types::DECIMAL, precision: 5, scale: 2, options: ['comment' => '利润率'])]
+    #[Assert\Length(max: 6)]
     private string $profitRate = '0.00';
 
     #[ORM\Column(type: Types::STRING, length: 255, nullable: true, options: ['comment' => '价格调整原因'])]
+    #[Assert\Length(max: 255)]
     private ?string $priceAdjustReason = null;
-
 
     #[UpdatedByColumn]
     #[ORM\Column(type: Types::STRING, nullable: true, options: ['comment' => '最后修改人'])]
+    #[Assert\Length(max: 255)]
     private ?string $lastModifiedBy = null;
 
     public function __toString(): string
     {
         $typeInfo = null !== $this->roomType ? $this->roomType->getName() : 'Unknown';
         $date = null !== $this->date ? $this->date->format('Y-m-d') : 'Unknown Date';
+
         return sprintf('%s - %s - %s', $typeInfo, $this->code, $date);
     }
 
@@ -87,10 +97,9 @@ class DailyInventory implements Stringable
         return $this->roomType;
     }
 
-    public function setRoomType(?RoomType $roomType): self
+    public function setRoomType(?RoomType $roomType): void
     {
         $this->roomType = $roomType;
-        return $this;
     }
 
     public function getHotel(): ?Hotel
@@ -98,10 +107,9 @@ class DailyInventory implements Stringable
         return $this->hotel;
     }
 
-    public function setHotel(?Hotel $hotel): self
+    public function setHotel(?Hotel $hotel): void
     {
         $this->hotel = $hotel;
-        return $this;
     }
 
     public function getDate(): ?\DateTimeInterface
@@ -109,10 +117,9 @@ class DailyInventory implements Stringable
         return $this->date;
     }
 
-    public function setDate(?\DateTimeInterface $date): self
+    public function setDate(?\DateTimeInterface $date): void
     {
         $this->date = $date;
-        return $this;
     }
 
     public function isReserved(): bool
@@ -120,10 +127,9 @@ class DailyInventory implements Stringable
         return $this->isReserved;
     }
 
-    public function setIsReserved(bool $isReserved): self
+    public function setIsReserved(bool $isReserved): void
     {
         $this->isReserved = $isReserved;
-        return $this;
     }
 
     public function getStatus(): DailyInventoryStatusEnum
@@ -131,10 +137,9 @@ class DailyInventory implements Stringable
         return $this->status;
     }
 
-    public function setStatus(DailyInventoryStatusEnum $status): self
+    public function setStatus(DailyInventoryStatusEnum $status): void
     {
         $this->status = $status;
-        return $this;
     }
 
     public function getContract(): ?HotelContract
@@ -142,10 +147,9 @@ class DailyInventory implements Stringable
         return $this->contract;
     }
 
-    public function setContract(?HotelContract $contract): self
+    public function setContract(?HotelContract $contract): void
     {
         $this->contract = $contract;
-        return $this;
     }
 
     public function getCode(): string
@@ -153,10 +157,9 @@ class DailyInventory implements Stringable
         return $this->code;
     }
 
-    public function setCode(string $code): self
+    public function setCode(string $code): void
     {
         $this->code = $code;
-        return $this;
     }
 
     public function getCostPrice(): string
@@ -164,11 +167,10 @@ class DailyInventory implements Stringable
         return $this->costPrice;
     }
 
-    public function setCostPrice(string $costPrice): self
+    public function setCostPrice(string $costPrice): void
     {
         $this->costPrice = $costPrice;
         $this->calculateProfitRate();
-        return $this;
     }
 
     public function getSellingPrice(): string
@@ -176,11 +178,10 @@ class DailyInventory implements Stringable
         return $this->sellingPrice;
     }
 
-    public function setSellingPrice(string $sellingPrice): self
+    public function setSellingPrice(string $sellingPrice): void
     {
         $this->sellingPrice = $sellingPrice;
         $this->calculateProfitRate();
-        return $this;
     }
 
     public function getProfitRate(): string
@@ -188,10 +189,9 @@ class DailyInventory implements Stringable
         return $this->profitRate;
     }
 
-    public function setProfitRate(string $profitRate): self
+    public function setProfitRate(string $profitRate): void
     {
         $this->profitRate = $profitRate;
-        return $this;
     }
 
     public function getPriceAdjustReason(): ?string
@@ -199,12 +199,10 @@ class DailyInventory implements Stringable
         return $this->priceAdjustReason;
     }
 
-    public function setPriceAdjustReason(?string $priceAdjustReason): self
+    public function setPriceAdjustReason(?string $priceAdjustReason): void
     {
         $this->priceAdjustReason = $priceAdjustReason;
-        return $this;
     }
-
 
     public function getLastModifiedBy(): ?string
     {
@@ -221,8 +219,8 @@ class DailyInventory implements Stringable
      */
     private function calculateProfitRate(): void
     {
-        $costPrice = (float)$this->costPrice;
-        $sellingPrice = (float)$this->sellingPrice;
+        $costPrice = (float) $this->costPrice;
+        $sellingPrice = (float) $this->sellingPrice;
 
         if ($costPrice > 0 && $sellingPrice > 0) {
             $profitRate = ($sellingPrice - $costPrice) / $costPrice * 100;
@@ -231,5 +229,4 @@ class DailyInventory implements Stringable
             $this->profitRate = '0.00';
         }
     }
-
 }

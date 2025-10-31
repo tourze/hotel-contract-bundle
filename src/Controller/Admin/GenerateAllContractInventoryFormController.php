@@ -9,7 +9,7 @@ use Symfony\Component\Routing\Attribute\Route;
 /**
  * 为所有生效合同生成库存表单控制器
  */
-class GenerateAllContractInventoryFormController extends AbstractController
+final class GenerateAllContractInventoryFormController extends AbstractController
 {
     #[Route(path: '/admin/room-type-inventory/generate-all-contract', name: 'admin_room_type_inventory_generate_all_contract')]
     public function __invoke(): Response

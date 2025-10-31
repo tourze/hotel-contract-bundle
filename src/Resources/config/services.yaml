@@ -9,8 +9,6 @@ services:
     resource: '../../Command/'
   Tourze\HotelContractBundle\Controller\:
     resource: '../../Controller/'
-  Tourze\HotelContractBundle\DataFixtures\:
-    resource: '../../DataFixtures/'
   Tourze\HotelContractBundle\Repository\:
     resource: '../../Repository/'
   Tourze\HotelContractBundle\Service\:

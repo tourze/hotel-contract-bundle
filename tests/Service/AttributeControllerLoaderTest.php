@@ -4,39 +4,56 @@ declare(strict_types=1);
 
 namespace Tourze\HotelContractBundle\Tests\Service;
 
-use PHPUnit\Framework\TestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use Symfony\Component\Routing\RouteCollection;
 use Tourze\HotelContractBundle\Service\AttributeControllerLoader;
+use Tourze\PHPUnitSymfonyKernelTest\AbstractIntegrationTestCase;
 
-class AttributeControllerLoaderTest extends TestCase
+/**
+ * @internal
+ */
+#[CoversClass(AttributeControllerLoader::class)]
+#[RunTestsInSeparateProcesses]
+final class AttributeControllerLoaderTest extends AbstractIntegrationTestCase
 {
-    private AttributeControllerLoader $loader;
-
-    protected function setUp(): void
+    protected function onSetUp(): void
     {
-        $this->loader = new AttributeControllerLoader();
+        // Setup for service tests
+    }
+
+    private function getAttributeControllerLoader(): AttributeControllerLoader
+    {
+        return self::getService(AttributeControllerLoader::class);
     }
 
     public function testLoaderCanBeInstantiated(): void
     {
-        $this->assertInstanceOf(AttributeControllerLoader::class, $this->loader);
+        $loader = $this->getAttributeControllerLoader();
+        $this->assertInstanceOf(AttributeControllerLoader::class, $loader);
     }
 
     public function testLoadReturnsRouteCollection(): void
     {
-        $result = $this->loader->load('test', 'attribute_controller');
+        $result = $this->getAttributeControllerLoader()->load('test', 'attribute_controller');
 
         $this->assertInstanceOf(RouteCollection::class, $result);
     }
 
     public function testSupportsReturnsTrueForAttributeControllerType(): void
     {
-        $this->assertTrue($this->loader->supports('test', 'attribute_controller'));
+        $this->assertTrue($this->getAttributeControllerLoader()->supports('test', 'attribute_controller'));
     }
 
     public function testSupportsReturnsFalseForOtherTypes(): void
     {
-        $this->assertFalse($this->loader->supports('test', 'other_type'));
-        $this->assertFalse($this->loader->supports('test', null));
+        $this->assertFalse($this->getAttributeControllerLoader()->supports('test', 'other_type'));
+        $this->assertFalse($this->getAttributeControllerLoader()->supports('test', null));
     }
-} 
+
+    public function testAutoloadMethodExists(): void
+    {
+        $reflection = new \ReflectionClass($this->getAttributeControllerLoader());
+        $this->assertTrue($reflection->hasMethod('autoload'));
+    }
+}

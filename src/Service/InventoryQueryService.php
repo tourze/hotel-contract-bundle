@@ -2,36 +2,44 @@
 
 namespace Tourze\HotelContractBundle\Service;
 
-use Doctrine\ORM\EntityManagerInterface;
+use Symfony\Component\DependencyInjection\Attribute\Autoconfigure;
 use Tourze\HotelContractBundle\Entity\DailyInventory;
-use Tourze\HotelContractBundle\Enum\DailyInventoryStatusEnum;
 use Tourze\HotelContractBundle\Enum\InventorySummaryStatusEnum;
+use Tourze\HotelContractBundle\Exception\InvalidEntityException;
+use Tourze\HotelContractBundle\Repository\DailyInventoryRepository;
 use Tourze\HotelContractBundle\Repository\InventorySummaryRepository;
 use Tourze\HotelProfileBundle\Entity\RoomType;
-use Tourze\HotelProfileBundle\Repository\RoomTypeRepository;
+use Tourze\HotelProfileBundle\Service\RoomTypeService;
 
 /**
  * 库存查询服务
  */
-class InventoryQueryService
+#[Autoconfigure(public: true)]
+readonly class InventoryQueryService
 {
     public function __construct(
-        private readonly EntityManagerInterface $entityManager,
-        private readonly RoomTypeRepository $roomTypeRepository,
-        private readonly InventorySummaryRepository $inventorySummaryRepository,
-    ) {}
+        private RoomTypeService $roomTypeService,
+        private InventorySummaryRepository $inventorySummaryRepository,
+        private DailyInventoryRepository $dailyInventoryRepository,
+    ) {
+    }
 
     /**
      * 获取指定房型在特定日期范围内的库存信息
+     *
+     * 不考虑并发：此方法为只读查询，不涉及数据修改
+     */
+    /**
+     * @return array<string, mixed>
      */
     public function getInventoryData(
         int $roomTypeId,
         string $checkInDate,
         string $checkOutDate,
-        int $roomCount
+        int $roomCount,
     ): array {
-        $roomType = $this->roomTypeRepository->find($roomTypeId);
-        if ($roomType === null) {
+        $roomType = $this->roomTypeService->findRoomTypeById($roomTypeId);
+        if (null === $roomType) {
             return [
                 'success' => false,
                 'message' => '房型不存在',
@@ -61,7 +69,7 @@ class InventoryQueryService
         }
 
         // 标记默认选择的库存
-        $this->markDefaultInventory($dailyInventories, $roomCount);
+        $dailyInventories = $this->markDefaultInventory($dailyInventories, $roomCount);
 
         return [
             'success' => true,
@@ -79,30 +87,39 @@ class InventoryQueryService
 
     /**
      * 获取指定日期的库存数据
+     *
+     * 不考虑并发：此方法为只读查询，不涉及数据修改
+     */
+    /**
+     * @return array<string, mixed>
      */
     private function getDayInventoryData(RoomType $roomType, \DateTimeInterface $date, int $roomCount): array
     {
         // 获取库存汇总信息
+        $hotel = $roomType->getHotel();
+        if (null === $hotel) {
+            throw new InvalidEntityException('房型必须关联一个酒店');
+        }
+
+        $hotelId = $hotel->getId();
+        $roomTypeId = $roomType->getId();
+
+        if (null === $hotelId || null === $roomTypeId) {
+            throw new InvalidEntityException('酒店ID或房型ID不能为空');
+        }
+
         $summary = $this->inventorySummaryRepository
             ->findByHotelRoomTypeAndDate(
-                $roomType->getHotel()->getId(),
-                $roomType->getId(),
+                $hotelId,
+                $roomTypeId,
                 $date
-            );
+            )
+        ;
 
         // 获取该日具体的库存记录
-        $inventories = $this->entityManager->createQueryBuilder()
-            ->select('di')
-            ->from(DailyInventory::class, 'di')
-            ->where('di.roomType = :roomType')
-            ->andWhere('di.date = :date')
-            ->andWhere('di.status = :status')
-            ->setParameter('roomType', $roomType)
-            ->setParameter('date', $date)
-            ->setParameter('status', DailyInventoryStatusEnum::AVAILABLE)
-            ->orderBy('di.costPrice', 'ASC')
-            ->getQuery()
-            ->getResult();
+        $inventories = $this->dailyInventoryRepository
+            ->findAvailableByRoomTypeAndDate($roomTypeId, $date)
+        ;
 
         // 格式化库存数据
         $inventoryData = [];
@@ -115,13 +132,15 @@ class InventoryQueryService
         $lowestPrice = null;
         $highestPrice = null;
 
-        if (!empty($inventories)) {
+        if ([] !== $inventories) {
             $prices = array_map(function (DailyInventory $inv) {
-                return (float)$inv->getSellingPrice();
+                return (float) $inv->getSellingPrice();
             }, $inventories);
 
-            $lowestPrice = min($prices);
-            $highestPrice = max($prices);
+            if ([] !== $prices) {
+                $lowestPrice = min($prices);
+                $highestPrice = max($prices);
+            }
         }
 
         return [
@@ -150,15 +169,20 @@ class InventoryQueryService
 
     /**
      * 格式化日库存数据
+     *
+     * 不考虑并发：此方法为纯数据格式化，不涉及数据修改
+     */
+    /**
+     * @return array<string, mixed>
      */
     private function formatDailyInventoryData(DailyInventory $dailyInventory): array
     {
         return [
             'id' => $dailyInventory->getId(),
             'code' => $dailyInventory->getCode(),
-            'costPrice' => (float)$dailyInventory->getCostPrice(),
-            'sellingPrice' => (float)$dailyInventory->getSellingPrice(),
-            'profitRate' => (float)$dailyInventory->getProfitRate(),
+            'costPrice' => (float) $dailyInventory->getCostPrice(),
+            'sellingPrice' => (float) $dailyInventory->getSellingPrice(),
+            'profitRate' => (float) $dailyInventory->getProfitRate(),
             'status' => $dailyInventory->getStatus(),
             'statusLabel' => $dailyInventory->getStatus()->getLabel(),
             'isReserved' => $dailyInventory->isReserved(),
@@ -173,43 +197,74 @@ class InventoryQueryService
 
     /**
      * 标记默认选择的库存
+     *
+     * 不考虑并发：此方法仅处理内存中的数据，不涉及数据库写入
      */
-    private function markDefaultInventory(array &$dailyInventories, int $roomCount = 1): void
+    /**
+     * @param array<array<string, mixed>> $dailyInventories
+     * @return array<array<string, mixed>>
+     */
+    private function markDefaultInventory(array $dailyInventories, int $roomCount = 1): array
     {
-        foreach ($dailyInventories as &$dayData) {
-            if (!$dayData['isAvailable']) {
+        foreach ($dailyInventories as $key => $dayData) {
+            if (false === ($dayData['isAvailable'] ?? false)) {
                 continue;
             }
 
-            // 选择价格最低的库存
-            $selectedCount = 0;
-            foreach ($dayData['inventories'] as &$inventory) {
-                if ($selectedCount < $roomCount) {
-                    $inventory['isSelected'] = true;
-                    $selectedCount++;
-                } else {
-                    break;
-                }
+            $inventories = $dayData['inventories'] ?? [];
+            if (!is_array($inventories)) {
+                continue;
             }
 
-            // 标记为默认选择
-            if ($selectedCount === $roomCount) {
-                $dayData['isDefault'] = true;
-            }
+            /** @var array<array<string, mixed>> $inventories */
+            $result = $this->selectLowestPriceInventories($inventories, $roomCount);
+            $dailyInventories[$key]['inventories'] = $result['inventories'];
+            $dailyInventories[$key]['isDefault'] = $result['selectedCount'] === $roomCount;
         }
+
+        return $dailyInventories;
+    }
+
+    /**
+     * @param array<array<string, mixed>> $inventories
+     * @return array{inventories: array<array<string, mixed>>, selectedCount: int}
+     */
+    private function selectLowestPriceInventories(array $inventories, int $roomCount): array
+    {
+        $selectedCount = 0;
+        foreach ($inventories as $key => $inventory) {
+            if ($selectedCount >= $roomCount) {
+                break;
+            }
+            $inventories[$key]['isSelected'] = true;
+            ++$selectedCount;
+        }
+
+        return [
+            'inventories' => $inventories,
+            'selectedCount' => $selectedCount,
+        ];
     }
 
     /**
      * 格式化房型数据
      */
+    /**
+     * @return array<string, mixed>
+     */
     private function formatRoomTypeData(RoomType $roomType): array
     {
+        $hotel = $roomType->getHotel();
+        if (null === $hotel) {
+            throw new InvalidEntityException('房型必须关联一个酒店');
+        }
+
         return [
             'id' => $roomType->getId(),
             'name' => $roomType->getName(),
             'hotel' => [
-                'id' => $roomType->getHotel()->getId(),
-                'name' => $roomType->getHotel()->getName(),
+                'id' => $hotel->getId(),
+                'name' => $hotel->getName(),
             ],
         ];
     }

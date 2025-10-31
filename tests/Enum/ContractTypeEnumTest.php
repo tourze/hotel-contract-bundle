@@ -2,59 +2,95 @@
 
 namespace Tourze\HotelContractBundle\Tests\Enum;
 
-use PHPUnit\Framework\TestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\TestWith;
 use Tourze\HotelContractBundle\Enum\ContractTypeEnum;
+use Tourze\PHPUnitEnum\AbstractEnumTestCase;
 
-class ContractTypeEnumTest extends TestCase
+/**
+ * @internal
+ */
+#[CoversClass(ContractTypeEnum::class)]
+final class ContractTypeEnumTest extends AbstractEnumTestCase
 {
-    public function test_enumCases_haveCorrectValues(): void
+    #[TestWith([ContractTypeEnum::FIXED_PRICE, 'fixed_price', '固定总价'])]
+    #[TestWith([ContractTypeEnum::DYNAMIC_PRICE, 'dynamic_price', '动态打包价'])]
+    public function testEnumValueAndLabel(ContractTypeEnum $enum, string $expectedValue, string $expectedLabel): void
     {
-        $this->assertSame('fixed_price', ContractTypeEnum::FIXED_PRICE->value);
-        $this->assertSame('dynamic_price', ContractTypeEnum::DYNAMIC_PRICE->value);
+        $this->assertSame($expectedValue, $enum->value);
+        $this->assertSame($expectedLabel, $enum->getLabel());
     }
 
-    public function test_getLabel_returnsCorrectLabels(): void
-    {
-        $this->assertSame('固定总价', ContractTypeEnum::FIXED_PRICE->getLabel());
-        $this->assertSame('动态打包价', ContractTypeEnum::DYNAMIC_PRICE->getLabel());
-    }
-
-    public function test_implementsInterfaces(): void
-    {
-        $this->assertInstanceOf(\Tourze\EnumExtra\Labelable::class, ContractTypeEnum::FIXED_PRICE);
-        $this->assertInstanceOf(\Tourze\EnumExtra\Itemable::class, ContractTypeEnum::FIXED_PRICE);
-        $this->assertInstanceOf(\Tourze\EnumExtra\Selectable::class, ContractTypeEnum::FIXED_PRICE);
-    }
-
-    public function test_allCasesExist(): void
+    public function testAllCasesExist(): void
     {
         $cases = ContractTypeEnum::cases();
-        
+
         $this->assertCount(2, $cases);
         $this->assertContains(ContractTypeEnum::FIXED_PRICE, $cases);
         $this->assertContains(ContractTypeEnum::DYNAMIC_PRICE, $cases);
     }
 
-    public function test_canCreateFromValue(): void
+    #[TestWith(['fixed_price', ContractTypeEnum::FIXED_PRICE])]
+    #[TestWith(['dynamic_price', ContractTypeEnum::DYNAMIC_PRICE])]
+    public function testFromReturnsCorrectEnum(string $value, ContractTypeEnum $expectedEnum): void
     {
-        $this->assertSame(ContractTypeEnum::FIXED_PRICE, ContractTypeEnum::from('fixed_price'));
-        $this->assertSame(ContractTypeEnum::DYNAMIC_PRICE, ContractTypeEnum::from('dynamic_price'));
+        $this->assertSame($expectedEnum, ContractTypeEnum::from($value));
     }
 
-    public function test_from_throwsException_withInvalidValue(): void
+    #[TestWith(['invalid_value'])]
+    #[TestWith([''])]
+    #[TestWith(['null'])]
+    #[TestWith(['unknown'])]
+    #[TestWith(['fixed'])]
+    #[TestWith(['dynamic'])]
+    public function testFromThrowsValueErrorWithInvalidValue(string $invalidValue): void
     {
         $this->expectException(\ValueError::class);
-        ContractTypeEnum::from('invalid');
+        ContractTypeEnum::from($invalidValue);
     }
 
-    public function test_tryFrom_returnsNull_withInvalidValue(): void
+    #[TestWith(['fixed_price', ContractTypeEnum::FIXED_PRICE])]
+    #[TestWith(['dynamic_price', ContractTypeEnum::DYNAMIC_PRICE])]
+    public function testTryFromReturnsEnumWithValidValue(string $value, ContractTypeEnum $expectedEnum): void
     {
-        $this->assertNull(ContractTypeEnum::tryFrom('invalid'));
+        $this->assertSame($expectedEnum, ContractTypeEnum::tryFrom($value));
     }
 
-    public function test_tryFrom_returnsEnum_withValidValue(): void
+    #[TestWith(['invalid_value'])]
+    #[TestWith([''])]
+    #[TestWith(['null'])]
+    #[TestWith(['unknown'])]
+    #[TestWith(['fixed'])]
+    #[TestWith(['dynamic'])]
+    public function testTryFromReturnsNullWithInvalidValue(string $invalidValue): void
     {
-        $this->assertSame(ContractTypeEnum::FIXED_PRICE, ContractTypeEnum::tryFrom('fixed_price'));
-        $this->assertSame(ContractTypeEnum::DYNAMIC_PRICE, ContractTypeEnum::tryFrom('dynamic_price'));
+        $this->assertNull(ContractTypeEnum::tryFrom($invalidValue));
     }
-} 
+
+    public function testValuesAreUnique(): void
+    {
+        $values = array_map(fn (ContractTypeEnum $case) => $case->value, ContractTypeEnum::cases());
+        $uniqueValues = array_unique($values);
+
+        $this->assertCount(count($values), $uniqueValues, 'All enum values must be unique');
+    }
+
+    public function testLabelsAreUnique(): void
+    {
+        $labels = array_map(fn (ContractTypeEnum $case) => $case->getLabel(), ContractTypeEnum::cases());
+        $uniqueLabels = array_unique($labels);
+
+        $this->assertCount(count($labels), $uniqueLabels, 'All enum labels must be unique');
+    }
+
+    public function testToArray(): void
+    {
+        $result = ContractTypeEnum::FIXED_PRICE->toArray();
+
+        // 验证返回的数组包含预期的键值对
+        $this->assertArrayHasKey('value', $result);
+        $this->assertArrayHasKey('label', $result);
+        $this->assertSame('fixed_price', $result['value']);
+        $this->assertSame('固定总价', $result['label']);
+    }
+}

@@ -4,193 +4,207 @@ declare(strict_types=1);
 
 namespace Tourze\HotelContractBundle\Tests\Service;
 
-use Doctrine\ORM\EntityManagerInterface;
-use Doctrine\ORM\EntityRepository;
-use PHPUnit\Framework\MockObject\MockObject;
-use PHPUnit\Framework\TestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use Tourze\HotelContractBundle\Entity\DailyInventory;
-use Tourze\HotelContractBundle\Entity\InventorySummary;
-use Tourze\HotelContractBundle\Enum\InventorySummaryStatusEnum;
-use Tourze\HotelContractBundle\Repository\DailyInventoryRepository;
+use Tourze\HotelContractBundle\Enum\DailyInventoryStatusEnum;
 use Tourze\HotelContractBundle\Repository\InventorySummaryRepository;
 use Tourze\HotelContractBundle\Service\InventorySummaryService;
 use Tourze\HotelProfileBundle\Entity\Hotel;
 use Tourze\HotelProfileBundle\Entity\RoomType;
+use Tourze\PHPUnitSymfonyKernelTest\AbstractIntegrationTestCase;
 
 /**
- * InventorySummaryService 单元测试
+ * InventorySummaryService 集成测试
+ *
+ * @internal
  */
-class InventorySummaryServiceTest extends TestCase
+#[CoversClass(InventorySummaryService::class)]
+#[RunTestsInSeparateProcesses]
+final class InventorySummaryServiceTest extends AbstractIntegrationTestCase
 {
-    private EntityManagerInterface|MockObject $entityManager;
-    private DailyInventoryRepository|MockObject $inventoryRepository;
-    private InventorySummaryRepository|MockObject $inventorySummaryRepository;
-    private InventorySummaryService $service;
-
-    protected function setUp(): void
+    protected function onSetUp(): void
     {
-        $this->entityManager = $this->createMock(EntityManagerInterface::class);
-        $this->inventoryRepository = $this->createMock(DailyInventoryRepository::class);
-        $this->inventorySummaryRepository = $this->createMock(InventorySummaryRepository::class);
-
-        $this->service = new InventorySummaryService(
-            $this->entityManager,
-            $this->inventoryRepository,
-            $this->inventorySummaryRepository,
-            $this->createMock(\Tourze\HotelProfileBundle\Repository\HotelRepository::class),
-            $this->createMock(\Tourze\HotelProfileBundle\Repository\RoomTypeRepository::class)
-        );
+        // Setup for service tests
     }
 
+    private function getInventorySummaryService(): InventorySummaryService
+    {
+        return self::getService(InventorySummaryService::class);
+    }
 
-
+    private function getInventorySummaryRepository(): InventorySummaryRepository
+    {
+        return self::getService(InventorySummaryRepository::class);
+    }
 
     /**
-     * 测试更新指定日期范围内的库存统计
+     * 测试同步库存汇总 - 成功场景
      */
-    public function testUpdateInventorySummary(): void
+    public function testSyncInventorySummarySuccess(): void
     {
-        $hotel = $this->createMock(Hotel::class);
-        $hotel->method('getId')->willReturn(1);
-        $roomType = $this->createMock(RoomType::class);
-        $roomType->method('getId')->willReturn(1);
+        // 准备测试数据
+        $hotel = new Hotel();
+        $hotel->setName('测试酒店');
+        $this->persistAndFlush($hotel);
+
+        $roomType = new RoomType();
+        $roomType->setName('标准间');
+        $roomType->setHotel($hotel);
+        $this->persistAndFlush($roomType);
+
+        // 创建一些库存数据
+        for ($i = 0; $i < 5; ++$i) {
+            $inventory = new DailyInventory();
+            $inventory->setCode('INV-' . ($i + 1));
+            $inventory->setDate(new \DateTimeImmutable('2024-01-0' . ($i + 1)));
+            $inventory->setHotel($hotel);
+            $inventory->setRoomType($roomType);
+            $inventory->setCostPrice('180.00');
+            $inventory->setSellingPrice('200.00');
+            $inventory->setProfitRate('11.11');
+            $inventory->setStatus(DailyInventoryStatusEnum::AVAILABLE);
+            $this->persistAndFlush($inventory);
+        }
+
+        $testDate = new \DateTimeImmutable('2024-01-01');
+
+        // 执行测试
+        $result = $this->getInventorySummaryService()->syncInventorySummary($testDate);
+
+        // 验证结果包含预期的键
+        $this->assertArrayHasKey('processed_count', $result);
+        $this->assertArrayHasKey('summary_count', $result);
+    }
+
+    /**
+     * 测试更新库存汇总 - 成功场景
+     */
+    public function testUpdateInventorySummarySuccess(): void
+    {
+        // 准备测试数据
+        $hotel = new Hotel();
+        $hotel->setName('测试酒店');
+        $this->persistAndFlush($hotel);
+
+        $roomType = new RoomType();
+        $roomType->setName('标准间');
+        $roomType->setHotel($hotel);
+        $this->persistAndFlush($roomType);
+
+        // 创建一些库存数据
+        for ($i = 0; $i < 3; ++$i) {
+            $inventory = new DailyInventory();
+            $inventory->setCode('INV-' . ($i + 1));
+            $inventory->setDate(new \DateTimeImmutable('2024-01-0' . ($i + 1)));
+            $inventory->setHotel($hotel);
+            $inventory->setRoomType($roomType);
+            $inventory->setCostPrice('180.00');
+            $inventory->setSellingPrice('200.00');
+            $inventory->setProfitRate('11.11');
+            $inventory->setStatus(DailyInventoryStatusEnum::AVAILABLE);
+            $this->persistAndFlush($inventory);
+        }
+
         $startDate = new \DateTimeImmutable('2024-01-01');
         $endDate = new \DateTimeImmutable('2024-01-03');
 
-        // 模拟第一天的查询和处理 - 第一次返回null创建新记录，后续返回existing记录
-        $existingSummary = $this->createMock(InventorySummary::class);
+        // 执行测试
+        $this->getInventorySummaryService()->updateInventorySummary($hotel, $roomType, $startDate, $endDate);
 
-        $this->inventorySummaryRepository->method('findOneBy')
-            ->willReturnOnConsecutiveCalls(null, $existingSummary, $existingSummary);
-
-        // 模拟DailyInventory查询
-        $inventoryQueryBuilder = $this->createMock(\Doctrine\ORM\QueryBuilder::class);
-        $inventoryQuery = $this->createMock(\Doctrine\ORM\Query::class);
-
-        $this->entityManager->method('getRepository')
-            ->with(DailyInventory::class)
-            ->willReturn($this->inventoryRepository);
-
-        $this->inventoryRepository->method('createQueryBuilder')
-            ->willReturn($inventoryQueryBuilder);
-
-        $inventoryQueryBuilder->method('select')->willReturnSelf();
-        $inventoryQueryBuilder->method('where')->willReturnSelf();
-        $inventoryQueryBuilder->method('andWhere')->willReturnSelf();
-        $inventoryQueryBuilder->method('setParameter')->willReturnSelf();
-        $inventoryQueryBuilder->method('getQuery')->willReturn($inventoryQuery);
-
-        $inventoryQuery->method('getSingleScalarResult')->willReturn(100);
-
-        $this->entityManager->expects($this->atLeastOnce())
-            ->method('persist');
-        $this->entityManager->expects($this->atLeastOnce())
-            ->method('flush');
-
-        // 执行测试 - 应该处理3天的数据
-        $this->service->updateInventorySummary($hotel, $roomType, $startDate, $endDate);
-
-        // 验证方法被调用 - 这里主要验证方法执行完成
-        $this->assertTrue(true);
+        // 验证库存汇总数据被创建或更新
+        $hotelId = $hotel->getId();
+        $roomTypeId = $roomType->getId();
+        $this->assertNotNull($hotelId);
+        $this->assertNotNull($roomTypeId);
+        $summary = $this->getInventorySummaryRepository()->findByHotelRoomTypeAndDate(
+            $hotelId,
+            $roomTypeId,
+            $startDate
+        );
+        $this->assertNotNull($summary);
     }
 
     /**
-     * 测试更新单日库存统计 - 创建新记录
+     * 测试更新日库存汇总 - 成功场景
      */
-
-
-    /**
-     * 测试计算库存状态 - 售罄状态
-     */
-    public function testInventoryStatusSoldOut(): void
+    public function testUpdateDailyInventorySummarySuccess(): void
     {
-        $hotel = $this->createMock(Hotel::class);
-        $hotel->method('getId')->willReturn(1);
-        $roomType = $this->createMock(RoomType::class);
-        $roomType->method('getId')->willReturn(1);
-        $date = new \DateTimeImmutable('2024-01-15');
+        // 准备测试数据
+        $hotel = new Hotel();
+        $hotel->setName('测试酒店');
+        $this->persistAndFlush($hotel);
 
-        $this->inventorySummaryRepository->method('findOneBy')->willReturn(null);
+        $roomType = new RoomType();
+        $roomType->setName('标准间');
+        $roomType->setHotel($hotel);
+        $this->persistAndFlush($roomType);
 
-        // 模拟查询返回可用房间数为0
-        $inventoryQueryBuilder = $this->createMock(\Doctrine\ORM\QueryBuilder::class);
-        $inventoryQuery = $this->createMock(\Doctrine\ORM\Query::class);
+        $inventory = new DailyInventory();
+        $inventory->setCode('INV-001');
+        $inventory->setDate(new \DateTimeImmutable('2024-01-01'));
+        $inventory->setHotel($hotel);
+        $inventory->setRoomType($roomType);
+        $inventory->setCostPrice('180.00');
+        $inventory->setSellingPrice('200.00');
+        $inventory->setProfitRate('11.11');
+        $inventory->setStatus(DailyInventoryStatusEnum::AVAILABLE);
+        $this->persistAndFlush($inventory);
 
-        $this->entityManager->method('getRepository')
-            ->willReturn($this->inventoryRepository);
+        $testDate = new \DateTimeImmutable('2024-01-01');
 
-        $this->inventoryRepository->method('createQueryBuilder')
-            ->willReturn($inventoryQueryBuilder);
+        // 执行测试
+        $this->getInventorySummaryService()->updateDailyInventorySummary($hotel, $roomType, $testDate);
 
-        $inventoryQueryBuilder->method('select')->willReturnSelf();
-        $inventoryQueryBuilder->method('where')->willReturnSelf();
-        $inventoryQueryBuilder->method('andWhere')->willReturnSelf();
-        $inventoryQueryBuilder->method('setParameter')->willReturnSelf();
-        $inventoryQueryBuilder->method('getQuery')->willReturn($inventoryQuery);
-
-        $inventoryQuery->method('getSingleScalarResult')->willReturnOnConsecutiveCalls(
-            100, // totalRooms
-            0,   // availableRooms (售罄)
-            5,   // reservedRooms
-            90,  // soldRooms
-            5    // pendingRooms
+        // 验证库存汇总数据被创建或更新
+        $hotelId = $hotel->getId();
+        $roomTypeId = $roomType->getId();
+        $this->assertNotNull($hotelId);
+        $this->assertNotNull($roomTypeId);
+        $summary = $this->getInventorySummaryRepository()->findByHotelRoomTypeAndDate(
+            $hotelId,
+            $roomTypeId,
+            $testDate
         );
-
-        $this->entityManager->expects($this->once())
-            ->method('persist')
-            ->with($this->callback(function (InventorySummary $summary) {
-                // 由于availableRooms=0，状态应该是SOLD_OUT
-                return true; // 这里应该检查状态，但mock对象无法直接验证
-            }));
-
-        $this->entityManager->expects($this->once())
-            ->method('flush');
-
-        $this->service->updateDailyInventorySummary($hotel, $roomType, $date);
+        $this->assertNotNull($summary);
     }
 
     /**
-     * 测试计算库存状态 - 预警状态
+     * 测试更新库存汇总状态 - 成功场景
      */
-    public function testInventoryStatusWarning(): void
+    public function testUpdateInventorySummaryStatusSuccess(): void
     {
-        $hotel = $this->createMock(Hotel::class);
-        $hotel->method('getId')->willReturn(1);
-        $roomType = $this->createMock(RoomType::class);
-        $roomType->method('getId')->willReturn(1);
-        $date = new \DateTimeImmutable('2024-01-15');
+        // 准备测试数据
+        $hotel = new Hotel();
+        $hotel->setName('测试酒店');
+        $this->persistAndFlush($hotel);
 
-        $this->inventorySummaryRepository->method('findOneBy')->willReturn(null);
+        $roomType = new RoomType();
+        $roomType->setName('标准间');
+        $roomType->setHotel($hotel);
+        $this->persistAndFlush($roomType);
 
-        // 模拟查询返回低库存
-        $inventoryQueryBuilder = $this->createMock(\Doctrine\ORM\QueryBuilder::class);
-        $inventoryQuery = $this->createMock(\Doctrine\ORM\Query::class);
+        // 创建一些库存数据
+        for ($i = 0; $i < 5; ++$i) {
+            $inventory = new DailyInventory();
+            $inventory->setCode('INV-' . ($i + 1));
+            $inventory->setDate(new \DateTimeImmutable('2024-01-0' . ($i + 1)));
+            $inventory->setHotel($hotel);
+            $inventory->setRoomType($roomType);
+            $inventory->setCostPrice('180.00');
+            $inventory->setSellingPrice('200.00');
+            $inventory->setProfitRate('11.11');
+            $inventory->setStatus(DailyInventoryStatusEnum::AVAILABLE);
+            $this->persistAndFlush($inventory);
+        }
 
-        $this->entityManager->method('getRepository')
-            ->willReturn($this->inventoryRepository);
+        $warningThreshold = 10;
 
-        $this->inventoryRepository->method('createQueryBuilder')
-            ->willReturn($inventoryQueryBuilder);
+        // 执行测试
+        $result = $this->getInventorySummaryService()->updateInventorySummaryStatus($warningThreshold);
 
-        $inventoryQueryBuilder->method('select')->willReturnSelf();
-        $inventoryQueryBuilder->method('where')->willReturnSelf();
-        $inventoryQueryBuilder->method('andWhere')->willReturnSelf();
-        $inventoryQueryBuilder->method('setParameter')->willReturnSelf();
-        $inventoryQueryBuilder->method('getQuery')->willReturn($inventoryQuery);
-
-        $inventoryQuery->method('getSingleScalarResult')->willReturnOnConsecutiveCalls(
-            100, // totalRooms
-            5,   // availableRooms (5% < 10% 预警阈值)
-            3,   // reservedRooms
-            87,  // soldRooms
-            5    // pendingRooms
-        );
-
-        $this->entityManager->expects($this->once())
-            ->method('persist');
-        $this->entityManager->expects($this->once())
-            ->method('flush');
-
-        $this->service->updateDailyInventorySummary($hotel, $roomType, $date);
+        // 验证结果包含预期的键
+        $this->assertArrayHasKey('processed_count', $result);
+        $this->assertArrayHasKey('warning_count', $result);
     }
 }

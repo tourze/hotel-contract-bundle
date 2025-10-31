@@ -6,133 +6,114 @@ use Doctrine\Bundle\FixturesBundle\Fixture;
 use Doctrine\Bundle\FixturesBundle\FixtureGroupInterface;
 use Doctrine\Common\DataFixtures\DependentFixtureInterface;
 use Doctrine\Persistence\ObjectManager;
+use Symfony\Component\DependencyInjection\Attribute\When;
 use Tourze\HotelContractBundle\Entity\DailyInventory;
 use Tourze\HotelContractBundle\Entity\HotelContract;
 use Tourze\HotelContractBundle\Enum\DailyInventoryStatusEnum;
+use Tourze\HotelProfileBundle\DataFixtures\HotelFixtures;
 use Tourze\HotelProfileBundle\DataFixtures\RoomTypeFixtures;
+use Tourze\HotelProfileBundle\Entity\Hotel;
 use Tourze\HotelProfileBundle\Entity\RoomType;
 
-/**
- * 日库存数据填充
- * 为合同创建库存数据
- */
-class DailyInventoryFixtures extends Fixture implements DependentFixtureInterface, FixtureGroupInterface
+#[When(env: 'test')]
+#[When(env: 'dev')]
+class DailyInventoryFixtures extends Fixture implements FixtureGroupInterface, DependentFixtureInterface
 {
+    public const INVENTORY_AVAILABLE = 'inventory-available';
+    public const INVENTORY_SOLD = 'inventory-sold';
+    public const INVENTORY_RESERVED = 'inventory-reserved';
+
     public function load(ObjectManager $manager): void
     {
-        // 获取所有合同
-        $contracts = [];
-        for ($i = 1; $i <= 10; $i++) {
-            try {
-                $contract = $this->getReference(HotelContractFixtures::CONTRACT_REFERENCE_PREFIX . $i, HotelContract::class);
-                $contracts[] = $contract;
-            } catch (\Throwable $e) {
-                // 忽略找不到的引用
-                continue;
-            }
-        }
+        $luxuryHotel = $this->getReference(HotelFixtures::LUXURY_HOTEL_REFERENCE, Hotel::class);
+        $businessHotel = $this->getReference(HotelFixtures::BUSINESS_HOTEL_REFERENCE, Hotel::class);
 
-        // 获取合同关联酒店的所有房型
-        foreach ($contracts as $contract) {
-            $hotel = $contract->getHotel();
+        $standardRoom = $this->getReference(RoomTypeFixtures::STANDARD_ROOM_REFERENCE, RoomType::class);
+        $deluxeRoom = $this->getReference(RoomTypeFixtures::LUXURY_SUITE_REFERENCE, RoomType::class);
+        $businessRoom = $this->getReference(RoomTypeFixtures::BUSINESS_ROOM_REFERENCE, RoomType::class);
 
-            // 使用引用获取房型，而不是查询数据库
-            $roomTypes = [];
-            for ($j = 1; $j <= 5; $j++) { // 假设每个酒店最多5个房型
-                try {
-                    $roomType = $this->getReference(RoomTypeFixtures::ROOM_TYPE_REFERENCE_PREFIX . $hotel->getId() . '_' . $j, RoomType::class);
-                    $roomTypes[] = $roomType;
-                } catch (\Throwable $e) {
-                    // 如果找不到引用就跳过
-                    break;
-                }
-            }
+        $activeContract = $this->getReference(HotelContractFixtures::CONTRACT_ACTIVE, HotelContract::class);
 
-            if (empty($roomTypes)) {
-                continue;
-            }
+        // 可用库存
+        $availableInventory = new DailyInventory();
+        $availableInventory->setCode('INV-2024-001');
+        $availableInventory->setRoomType($standardRoom);
+        $availableInventory->setHotel($luxuryHotel);
+        $availableInventory->setContract($activeContract);
+        $availableInventory->setDate(new \DateTimeImmutable('2024-08-15'));
+        $availableInventory->setIsReserved(false);
+        $availableInventory->setStatus(DailyInventoryStatusEnum::AVAILABLE);
+        $availableInventory->setCostPrice('150.00');
+        $availableInventory->setSellingPrice('300.00');
+        // DailyInventory 实体不包含 totalRooms 等字段
 
-            // 计算每个房型的库存数量
-            $totalRooms = $contract->getTotalRooms();
-            $roomCount = count($roomTypes);
-            $roomsPerType = (int)floor($totalRooms / $roomCount);
-            $extraRooms = $totalRooms % $roomCount;
+        $manager->persist($availableInventory);
 
-            // 为每个房型创建库存
-            $typeIndex = 0;
-            foreach ($roomTypes as $roomType) {
-                // 计算此房型的房间数
-                $typeTotalRooms = $roomsPerType;
-                if ($typeIndex < $extraRooms) {
-                    $typeTotalRooms += 1;
-                }
-                $typeIndex++;
+        // 已售完库存
+        $soldInventory = new DailyInventory();
+        $soldInventory->setCode('INV-2024-002');
+        $soldInventory->setRoomType($deluxeRoom);
+        $soldInventory->setHotel($luxuryHotel);
+        $soldInventory->setContract($activeContract);
+        $soldInventory->setDate(new \DateTimeImmutable('2024-08-16'));
+        $soldInventory->setIsReserved(false);
+        $soldInventory->setStatus(DailyInventoryStatusEnum::SOLD);
+        $soldInventory->setCostPrice('200.00');
+        $soldInventory->setSellingPrice('450.00');
+        // DailyInventory 实体不包含 totalRooms 等字段
 
-                if ($typeTotalRooms <= 0) {
-                    continue;
-                }
+        $manager->persist($soldInventory);
 
-                // 获取合同的起始日期
-                $startDate = new \DateTimeImmutable($contract->getStartDate()->format('Y-m-d'));
-                $endDate = new \DateTimeImmutable($contract->getEndDate()->format('Y-m-d'));
+        // 预留库存
+        $reservedInventory = new DailyInventory();
+        $reservedInventory->setCode('INV-2024-003');
+        $reservedInventory->setRoomType($businessRoom);
+        $reservedInventory->setHotel($businessHotel);
+        $reservedInventory->setDate(new \DateTimeImmutable('2024-08-17'));
+        $reservedInventory->setIsReserved(true);
+        $reservedInventory->setStatus(DailyInventoryStatusEnum::RESERVED);
+        $reservedInventory->setCostPrice('100.00');
+        $reservedInventory->setSellingPrice('180.00');
+        // DailyInventory 实体不包含 totalRooms 等字段
+        $reservedInventory->setPriceAdjustReason('节假日价格调整');
 
-                // 只生成7天的库存用于测试
-                $endDate = $startDate->modify('+6 days');
+        $manager->persist($reservedInventory);
 
-                // 为每一天创建库存
-                $currentDate = clone $startDate;
-                while ($currentDate <= $endDate) {
-                    $dateFormatted = $currentDate->format('Y-m-d');
+        // 额外的测试数据
+        for ($i = 1; $i <= 7; ++$i) {
+            $inventory = new DailyInventory();
+            $inventory->setCode(sprintf('TEST-INV-%03d', $i));
+            $inventory->setRoomType(0 === $i % 2 ? $standardRoom : $businessRoom);
+            $inventory->setHotel($luxuryHotel);
+            $inventory->setContract($activeContract);
+            $inventory->setDate(new \DateTimeImmutable(sprintf('2024-08-%02d', $i + 10)));
+            $inventory->setIsReserved(false);
+            $inventory->setStatus(DailyInventoryStatusEnum::AVAILABLE);
+            $inventory->setCostPrice('120.00');
+            $inventory->setSellingPrice('250.00');
+            // DailyInventory 实体不包含 totalRooms 等字段
 
-                    // 为每个房间创建库存
-                    for ($i = 1; $i <= $typeTotalRooms; $i++) {
-                        // 生成唯一code
-                        $code = sprintf(
-                            'INV-%s-%s-%s-%d',
-                            $contract->getContractNo(),
-                            $roomType->getId(),
-                            $dateFormatted,
-                            $i
-                        );
-
-                        // 创建库存记录
-                        $inventory = new DailyInventory();
-                        $inventory->setRoomType($roomType);
-                        $inventory->setHotel($hotel);
-                        $inventory->setDate(clone $currentDate);
-                        $inventory->setContract($contract);
-                        $inventory->setCode($code);
-                        $inventory->setIsReserved(false);
-                        $inventory->setStatus(DailyInventoryStatusEnum::AVAILABLE);
-
-                        // 设置随机价格
-                        $baseCost = rand(200, 600);
-                        $basePrice = $baseCost * (1 + rand(10, 30) / 100);
-                        $inventory->setCostPrice((string)$baseCost);
-                        $inventory->setSellingPrice((string)$basePrice);
-
-                        $manager->persist($inventory);
-                    }
-
-                    // 移动到下一天
-                    $currentDate = $currentDate->modify('+1 day');
-                }
-            }
+            $manager->persist($inventory);
         }
 
         $manager->flush();
+
+        $this->addReference(self::INVENTORY_AVAILABLE, $availableInventory);
+        $this->addReference(self::INVENTORY_SOLD, $soldInventory);
+        $this->addReference(self::INVENTORY_RESERVED, $reservedInventory);
+    }
+
+    public static function getGroups(): array
+    {
+        return ['hotel-contract', 'test'];
     }
 
     public function getDependencies(): array
     {
         return [
-            HotelContractFixtures::class,
+            HotelFixtures::class,
             RoomTypeFixtures::class,
+            HotelContractFixtures::class,
         ];
-    }
-
-    public static function getGroups(): array
-    {
-        return ['dev', 'test'];
     }
 }
