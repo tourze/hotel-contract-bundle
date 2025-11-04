@@ -21,8 +21,10 @@ use Tourze\PHPUnitSymfonyWebTest\AbstractEasyAdminControllerTestCase;
 #[RunTestsInSeparateProcesses]
 final class HotelContractCrudControllerTest extends AbstractEasyAdminControllerTestCase
 {
-    protected function onSetUp(): void
+  
+    public static function setUpBeforeClass(): void
     {
+        parent::setUpBeforeClass();
         // 设置测试环境变量
         putenv('MAILER_DSN=smtp://localhost:1025');
     }
