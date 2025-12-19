@@ -18,7 +18,7 @@ use Tourze\HotelProfileBundle\Service\HotelService;
 use Tourze\HotelProfileBundle\Service\RoomTypeService;
 
 #[Autoconfigure(public: true)]
-readonly class InventorySummaryService
+readonly final class InventorySummaryService
 {
     public function __construct(
         private EntityManagerInterface $entityManager,

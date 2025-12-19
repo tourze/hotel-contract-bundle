@@ -15,7 +15,7 @@ use Tourze\HotelContractBundle\Service\InventoryWarningService;
     name: self::NAME,
     description: '检查库存预警并发送通知邮件',
 )]
-class InventoryWarningCommand extends Command
+final class InventoryWarningCommand extends Command
 {
     protected const NAME = 'app:inventory:check-warnings';
 

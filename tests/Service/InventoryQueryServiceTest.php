@@ -45,7 +45,7 @@ final class InventoryQueryServiceTest extends AbstractIntegrationTestCase
         $this->assertArrayHasKey('data', $result);
 
         // 验证 data 字段是数组
-        $this->assertIsArray($result['data']); // @phpstan-ignore method.alreadyNarrowedType (保留测试意图明确性)
+        $this->assertIsArray($result['data']);
         $data = $result['data'];
 
         // 如果查询失败（房型不存在），data 应该是空数组
@@ -59,7 +59,7 @@ final class InventoryQueryServiceTest extends AbstractIntegrationTestCase
             $this->assertArrayHasKey('roomCount', $data);
             $this->assertArrayHasKey('dailyInventories', $data);
             $this->assertArrayHasKey('totalDays', $data);
-            $this->assertIsArray($data['dailyInventories']); // @phpstan-ignore method.alreadyNarrowedType (保留测试意图明确性)
+            $this->assertIsArray($data['dailyInventories']);
         }
     }
 }

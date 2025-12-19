@@ -15,7 +15,7 @@ use Tourze\HotelContractBundle\Repository\HotelContractRepository;
 
 #[Autoconfigure(public: true)]
 #[WithMonologChannel(channel: 'hotel_contract')]
-readonly class ContractService
+readonly final class ContractService
 {
     public function __construct(
         private EntityManagerInterface $entityManager,

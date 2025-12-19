@@ -5,7 +5,7 @@ namespace Tourze\HotelContractBundle\Service;
 use Tourze\EnvManageBundle\Entity\Env;
 use Tourze\EnvManageBundle\Service\EnvService;
 
-class InventoryConfig
+final class InventoryConfig
 {
     private const PREFIX = 'INVENTORY_';
     private const CONFIG_KEYS = [

@@ -161,7 +161,7 @@ final class RoomTypeInventoryServiceTest extends AbstractIntegrationTestCase
         $result = $this->getRoomTypeInventoryService()->findAvailableInventories($roomType, $date, $count);
 
         // 验证结果是数组且包含DailyInventory实例或为空
-        $this->assertIsArray($result); // @phpstan-ignore method.alreadyNarrowedType (保留测试意图明确性)
+        $this->assertIsArray($result);
         if (count($result) > 0) {
             $this->assertContainsOnlyInstancesOf(DailyInventory::class, $result);
         } else {

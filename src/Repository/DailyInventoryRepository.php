@@ -15,7 +15,7 @@ use Tourze\PHPUnitSymfonyKernelTest\Attribute\AsRepository;
  * @extends ServiceEntityRepository<DailyInventory>
  */
 #[AsRepository(entityClass: DailyInventory::class)]
-class DailyInventoryRepository extends ServiceEntityRepository
+final class DailyInventoryRepository extends ServiceEntityRepository
 {
     public function __construct(ManagerRegistry $registry)
     {

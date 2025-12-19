@@ -9,7 +9,7 @@ use Tourze\HotelContractBundle\Entity\DailyInventory;
 use Tourze\HotelProfileBundle\Entity\RoomType;
 
 #[Autoconfigure(public: true)]
-readonly class CalendarDataOrganizer
+readonly final class CalendarDataOrganizer
 {
     /**
      * @param array<array<string, mixed>> $dates

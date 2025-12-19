@@ -10,7 +10,7 @@ use Tourze\HotelContractBundle\Entity\DailyInventory;
 use Tourze\HotelContractBundle\Repository\DailyInventoryRepository;
 
 #[Autoconfigure(public: true)]
-readonly class InventoryPriceUpdater
+readonly final class InventoryPriceUpdater
 {
     public function __construct(
         private EntityManagerInterface $entityManager,

@@ -11,7 +11,7 @@ use Tourze\HotelContractBundle\Enum\DailyInventoryStatusEnum;
 use Tourze\HotelContractBundle\Repository\DailyInventoryRepository;
 
 #[Autoconfigure(public: true)]
-readonly class InventoryStatusUpdater
+readonly final class InventoryStatusUpdater
 {
     public function __construct(
         private EntityManagerInterface $entityManager,

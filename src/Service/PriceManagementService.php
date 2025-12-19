@@ -19,7 +19,7 @@ use Tourze\HotelProfileBundle\Service\RoomTypeService;
  */
 #[Autoconfigure(public: true)]
 #[WithMonologChannel(channel: 'hotel_contract')]
-readonly class PriceManagementService
+readonly final class PriceManagementService
 {
     public function __construct(
         private EntityManagerInterface $entityManager,

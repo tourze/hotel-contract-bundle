@@ -46,7 +46,7 @@ final class InventoryPriceUpdaterTest extends AbstractIntegrationTestCase
 
         $result = $this->getInventoryPriceUpdater()->batchUpdateInventoryPrice($params);
 
-        $this->assertIsArray($result); // @phpstan-ignore method.alreadyNarrowedType (保留测试意图明确性)
+        $this->assertIsArray($result);
         $this->assertFalse($result['success']);
         $this->assertSame('缺少必要参数', $result['message']);
         $this->assertSame(0, $result['updated_count']);

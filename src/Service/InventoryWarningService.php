@@ -16,7 +16,7 @@ use Tourze\HotelContractBundle\Repository\InventorySummaryRepository;
 
 #[Autoconfigure(public: true)]
 #[WithMonologChannel(channel: 'hotel_contract')]
-class InventoryWarningService
+final class InventoryWarningService
 {
     private const WARNING_CACHE_KEY = 'inventory_warning_sent_%s_%s_%s'; // hotel_id_roomType_id_date
 

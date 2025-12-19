@@ -17,7 +17,7 @@ use Tourze\HotelContractBundle\Entity\InventorySummary;
  * 应用管理菜单服务
  */
 #[Autoconfigure(public: true)]
-readonly class AdminMenu implements MenuProviderInterface
+readonly final class AdminMenu implements MenuProviderInterface
 {
     public function __construct(
         private LinkGeneratorInterface $linkGenerator,

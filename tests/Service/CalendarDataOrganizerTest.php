@@ -78,7 +78,7 @@ final class CalendarDataOrganizerTest extends AbstractIntegrationTestCase
         $this->assertArrayHasKey('date', $result[0]);
         $this->assertArrayHasKey('inventories', $result[0]);
         // 验证inventories字段的内容
-        $this->assertIsArray($result[0]['inventories']); // @phpstan-ignore method.alreadyNarrowedType (保留测试意图明确性)
+        $this->assertIsArray($result[0]['inventories']);
     }
 
     public function testGenerateRoomTypeInventoryPricesReturnsExpectedStructure(): void
@@ -113,6 +113,6 @@ final class CalendarDataOrganizerTest extends AbstractIntegrationTestCase
         $this->assertArrayHasKey('date', $result[0]);
         $this->assertArrayHasKey('inventories', $result[0]);
         // 验证inventories字段的内容
-        $this->assertIsArray($result[0]['inventories']); // @phpstan-ignore method.alreadyNarrowedType (保留测试意图明确性)
+        $this->assertIsArray($result[0]['inventories']);
     }
 }

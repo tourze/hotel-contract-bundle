@@ -15,7 +15,7 @@ use Tourze\HotelProfileBundle\Service\RoomTypeService;
  * 库存查询服务
  */
 #[Autoconfigure(public: true)]
-readonly class InventoryQueryService
+readonly final class InventoryQueryService
 {
     public function __construct(
         private RoomTypeService $roomTypeService,

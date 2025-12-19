@@ -21,7 +21,7 @@ use Tourze\HotelProfileBundle\Service\RoomTypeService;
  * 替代原有的RoomService，直接管理房型库存而非具体房间
  */
 #[Autoconfigure(public: true)]
-readonly class RoomTypeInventoryService
+readonly final class RoomTypeInventoryService
 {
     public function __construct(
         private EntityManagerInterface $entityManager,

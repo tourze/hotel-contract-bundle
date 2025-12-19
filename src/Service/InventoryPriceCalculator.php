@@ -9,7 +9,7 @@ use Tourze\HotelContractBundle\Entity\DailyInventory;
 use Tourze\HotelContractBundle\Exception\InvalidEntityException;
 
 #[Autoconfigure(public: true)]
-readonly class InventoryPriceCalculator
+readonly final class InventoryPriceCalculator
 {
     /**
      * @param array<string, mixed> $adjustmentData
