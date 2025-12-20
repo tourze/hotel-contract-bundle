@@ -41,7 +41,7 @@
     "tourze/doctrine-user-bundle": "1.0.*",
     "tourze/easy-admin-menu-bundle": "1.0.*",
     "tourze/enum-extra": "1.0.*",
-    "tourze/env-manage-bundle": "0.2.*",
+    "tourze/env-manage-bundle": "0.3.*",
     "tourze/hotel-profile-bundle": "0.0.*",
     "tourze/symfony-dependency-service-loader": "1.0.*",
     "tourze/symfony-routing-auto-loader-bundle": "1.0.*"
